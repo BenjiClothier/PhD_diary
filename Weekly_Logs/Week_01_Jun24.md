@@ -20,6 +20,13 @@ Investigating the structural limitations of K-Nearest Neighbours (K-NN) in high-
 
 ## 📊 Results & Insights
 
+## Average Performance Summary Across All MVTec Categories
+
+| Method | Avg Init | Avg Map | Avg Drift | Avg $V_{tan}$ |
+|:---|---:|---:|---:|---:|
+| **`fullbank` (100% Data)** | **0.9806** | **0.9785** | 0.9515 | N/A |
+| **`coreset0.01` (1% Data)** | 0.9676 | 0.9666 | **0.9537** | **0.9629** |
+| **`cdc_coreset0.01` (1% + Tangent CDC)** | 0.9650 | 0.9605 | 0.9270 | 0.9510 |
 
 ## Top Performers by Category
 
