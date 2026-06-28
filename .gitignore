@@ -1,0 +1,77 @@
+# ---------------------------------------------------
+# LaTeX Source (Remove this if you want Git to track your writing!)
+# ---------------------------------------------------
+*.tex
+
+# ---------------------------------------------------
+# Core LaTeX Auxiliary Files
+# ---------------------------------------------------
+*.aux
+*.lof
+*.log
+*.lot
+*.fls
+*.out
+*.toc
+*.fmt
+*.fot
+*.cb
+*.cb2
+*.xdv
+
+# ---------------------------------------------------
+# Generated Output Files (PDF, DVI, PS)
+# ---------------------------------------------------
+# Note: Some people prefer to track their final PDFs. 
+# If so, comment out the *.pdf line.
+# *.pdf
+*.dvi
+*.ps
+*.eps
+
+# ---------------------------------------------------
+# Bibliography (BibTeX / Biber)
+# ---------------------------------------------------
+*.bbl
+*.bcf
+*.blg
+*-blx.aux
+*-blx.bib
+*.run.xml
+
+# ---------------------------------------------------
+# Build Tools & Sync (latexmk, SyncTeX)
+# ---------------------------------------------------
+*.fdb_latexmk
+*.synctex
+*.synctex(busy)
+*.synctex.gz
+*.synctex.gz(busy)
+*.pdfsync
+
+# ---------------------------------------------------
+# Common Packages (Glossaries, Indices, etc.)
+# ---------------------------------------------------
+*.acn
+*.acr
+*.alg
+*.glg
+*.glo
+*.gls
+*.glsdefs
+*.idx
+*.ind
+*.ilg
+*.ist
+*.nlo
+*.nls
+*.out.ps
+
+# ---------------------------------------------------
+# Editor/OS Specific (VS Code, TeXShop, Mac)
+# ---------------------------------------------------
+.vscode/
+*.swp
+*.bak
+*.sav
+.DS_Store
