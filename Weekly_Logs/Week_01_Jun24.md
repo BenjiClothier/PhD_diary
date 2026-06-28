@@ -90,56 +90,69 @@ At its core, Corollary B.1 is a rigorous statement of **Laplace’s Method**. La
 Here is how the authors formalise this to track the exact error bounds.
 
 #### 1. Setting the Stage: The Space and the Functions
-> **Line:** "Let $\Omega\subset\mathbb{R}^{m}$ be an open set and let $\Omega^{\prime}\subset\Omega$ be a closed ball. Let $c_{1}:=Vol(\Omega^{\prime})$."
+**Line:**
+"Let $\Omega\subset\mathbb{R}^{m}$ be an open set and let $\Omega'\subset\Omega$ be a closed ball. Let $c_{1}:=\text{Vol}(\Omega')$."
 
-* **The Maths:** $\Omega$ is the entire mathematical space (or domain) we are integrating over. $\Omega^{\prime}$ is a smaller, tightly defined "bubble" (a closed ball) inside that space.
-* **The Concept:** We know the action happens at the minimum of our function. $\Omega^{\prime}$ is defined as the specific neighbourhood immediately surrounding that minimum. We record its volume as $c_1$ so we can use it to bound our error later.
+* **The Maths:** $\Omega$ is the entire mathematical space (or domain) we are integrating over. $\Omega'$ is a smaller, tightly defined "bubble" (a closed ball) inside that space.
+* **The Concept:** We know the action happens at the minimum of our function. $\Omega'$ is defined as the specific neighbourhood immediately surrounding that minimum. We record its volume as $c_1$ so we can use it to bound our error later.
 
-> **Line:** "Let $F,g:\Omega\rightarrow\mathbb{R}$ with the following assumptions:"
+**Line:** "Let $F,g:\Omega\rightarrow\mathbb{R}$ with the following assumptions:"
 
 * **The Concept:** We are dealing with two functions. $F(x)$ sits in the exponent and drives the sharp peak. $g(x)$ sits outside the exponent and modulates the height or amplitude of the function.
 
 #### 2. Assumptions on $F(x)$ (The Exponent)
-> **Line:** "$F|_{\Omega^{\prime}}\in C^{3}(\Omega^{\prime})$ and $F\ge0$ on $\Omega$. There is a unique minimiser $x^{*}\in int(\Omega^{\prime})$ of $F$ on $\Omega$."
+**Line:**
+$$
+F|_{\Omega'} \in C^{3}(\Omega') \text{ and } F \ge 0 \text{ on } \Omega. \text{ There is a unique minimiser } x^* \in \text{int}(\Omega') \text{ of } F \text{ on } \Omega.
+$$
 
-* **The Maths:** Inside our bubble $\Omega^{\prime}$, $F$ is three-times continuously differentiable ($C^3$). $F$ is never negative, and it hits its bottom value at exactly one point, $x^*$, which is safely inside the bubble.
+* **The Maths:** Inside our bubble $\Omega'$, $F$ is three-times continuously differentiable ($C^3$). $F$ is never negative, and it hits its bottom value at exactly one point, $x^*$, which is safely inside the bubble.
 * **The Concept:** We need $F$ to be highly smooth near the minimum so we can approximate it with a parabola (a Taylor expansion up to the second derivative). 
 
-> **Line:** "Define $m_{1}:=\inf_{x\in\Omega\backslash\Omega^{\prime}}\{F(x)-F(x^{*})\}>0,$ $m_{2}:=\inf_{x\in\Omega^{\prime}}\lambda_{\min}(\nabla^{2}F(x))>0$." *(Note: The text briefly contains a typo calling the first term $n_1$, but later refers to it correctly as $m_1$)*.
+**Line:**
+$$
+m_{1} := \inf_{x\in\Omega\setminus\Omega'}\{F(x)-F(x^*)\} > 0, \quad m_{2} := \inf_{x\in\Omega'}\lambda_{\min}(\nabla^{2}F(x)) > 0
+$$
+*(Note: The text briefly contains a typo calling the first term $n_1$, but later refers to it correctly as $m_1$)*.
 
-* **The Maths ($m_1$):** This looks at all points *outside* our bubble ($\Omega\backslash\Omega^{\prime}$). It states that the value of $F(x)$ everywhere outside the bubble is strictly greater than the minimum $F(x^*)$ by at least a gap of $m_1$. This guarantees there are no "competing" peaks elsewhere in the domain that could mess up the integral.
+* **The Maths ($m_1$):** This looks at all points *outside* our bubble ($\Omega\setminus\Omega'$). It states that the value of $F(x)$ everywhere outside the bubble is strictly greater than the minimum $F(x^*)$ by at least a gap of $m_1$. This guarantees there are no "competing" peaks elsewhere in the domain that could mess up the integral.
 * **The Maths ($m_2$):** Inside the bubble, we look at the Hessian matrix $\nabla^{2}F(x)$ (the matrix of second derivatives, which measures curvature). We require its smallest eigenvalue ($\lambda_{\min}$) to be bounded away from zero by at least $m_2$. This guarantees the minimum is strictly "sharp" or convex—it looks like a steep bowl, not a flat trough.
 
-> **Line:** "Let $c_{2}:=\sup_{x\in\Omega^{\prime}}||\nabla^{2}F(x)|| , c_{3}:=\sup_{x\in\Omega^{\prime}}||\nabla^{3}F(x)||$"
+**Line:**
+"Let $c_{2}:=\sup_{x\in\Omega'}\|\nabla^{2}F(x)\| , c_{3}:=\sup_{x\in\Omega'}\|\nabla^{3}F(x)\|$"
 
 * **The Concept:** The authors are just taking inventory. They record the maximum possible values (the supremum) of the second ($c_2$) and third ($c_3$) derivatives inside the bubble. By capping how wildly $F$ can curve, they can strictly bound the error of their approximation.
 
 #### 3. Assumptions on $g(x)$ (The Amplitude)
-> **Line:** "$g|_{\Omega^{\prime}}\in C^{1}(\Omega^{\prime})$ and $\int_{\Omega}|g(x)|dx<\infty$"
+**Line:** "$g|_{\Omega'} \in C^{1}(\Omega')$ and $\int_{\Omega}|g(x)|dx < \infty$"
 
 * **The Maths:** Inside the bubble, $g$ must be smooth (differentiable once). Across the *entire* space, the absolute area under $g(x)$ must be finite. 
 * **The Concept:** If $g(x)$ were allowed to explode to infinity somewhere outside the bubble, it could overpower the exponential decay of $F(x)$ and ruin the integral. 
 
-> **Line:** "Let $c_{4}:=\sup_{x\in\Omega^{\prime}}|g(x)| , c_{5}:=\sup_{x\in\Omega^{\prime}}||\nabla g(x)|| , c_{6}:=\int_{\Omega}|g(x)|dx.$"
+**Line:**
+"Let $c_{4}:=\sup_{x\in\Omega'}|g(x)| , c_{5}:=\sup_{x\in\Omega'}\|\nabla g(x)\| , c_{6}:=\int_{\Omega}|g(x)|dx.$"
 
 * **The Concept:** Again, taking inventory. They record the maximum height of $g$ ($c_4$), the maximum slope of $g$ ($c_5$) inside the bubble, and the total area of $g$ across the whole space ($c_6$). 
 
 #### 4. The Grand Result: The Integral Approximation
-> **Line:** "Then, for every $\theta>0.$ $\int_{\Omega}g(x)e^{-F(x)/\theta}dx=\exp(-F(x^{*})/\theta)\frac{(2\pi\theta)^{m/2}}{\sqrt{|\nabla^{2}F(x^{*})|}}(g(x^{*})+h(\theta)).$"
+**Line:** "Then, for every $\theta>0.$"
+$$
+\int_{\Omega}g(x)e^{-F(x)/\theta}dx = \exp(-F(x^*)/\theta) \frac{(2\pi\theta)^{m/2}}{\sqrt{|\nabla^{2}F(x^*)|}} (g(x^*) + h(\theta))
+$$
 
 This is the core equation of the corollary. Because the peak is so sharp around $x^*$, we can evaluate the integral by effectively replacing $F(x)$ with a parabolic Taylor expansion around $x^*$, turning the integrand into a standard Gaussian curve. Here are the pieces:
-1. **$\exp(-F(x^{*})/\theta)$:** The raw height of the exponential function exactly at its peak.
-2. **$\frac{(2\pi\theta)^{m/2}}{\sqrt{|\nabla^{2}F(x^{*})|}}$:** This is the volume or "width" of the peak. When you integrate a Gaussian, the area depends on the variance. Here, $\theta$ acts like the variance. The term $|\nabla^{2}F(x^{*})|$ is the determinant of the Hessian (the product of the curvatures in all dimensions). The sharper the bowl, the smaller the volume under the peak. 
-3. **$g(x^{*})$:** Because the peak is infinitesimally narrow, the integral essentially only "sees" the function $g(x)$ at the exact point $x^*$.
+1. **$\exp(-F(x^*)/\theta)$:** The raw height of the exponential function exactly at its peak.
+2. **$\frac{(2\pi\theta)^{m/2}}{\sqrt{|\nabla^{2}F(x^*)|}}$:** This is the volume or "width" of the peak. When you integrate a Gaussian, the area depends on the variance. Here, $\theta$ acts like the variance. The term $|\nabla^{2}F(x^*)|$ is the determinant of the Hessian (the product of the curvatures in all dimensions). The sharper the bowl, the smaller the volume under the peak. 
+3. **$g(x^*)$:** Because the peak is infinitesimally narrow, the integral essentially only "sees" the function $g(x)$ at the exact point $x^*$.
 4. **$h(\theta)$:** The mathematical error of this approximation.
 
 #### 5. Bounding the Error
-> **Line:** "where $|h(\theta)|$ can be upper bounded by a function of $(c_{1},...,c_{6},m_{1},m_{2})$. Moreover, $h(\theta)=O(\sqrt{\theta})$ as $\theta\rightarrow0.$"
+**Line:** "where $|h(\theta)|$ can be upper bounded by a function of $(c_{1},...,c_{6},m_{1},m_{2})$. Moreover, $h(\theta)=O(\sqrt{\theta})$ as $\theta\rightarrow 0.$"
 
 * **The Maths:** The error $h(\theta)$ shrinks proportionally to $\sqrt{\theta}$ as $\theta$ gets closer to zero. 
 * **The Concept:** Because they carefully logged all those boundaries ($c_1$ through $c_6$, and $m_1, m_2$), they can guarantee that the error won't randomly blow up. It is strictly controlled by those specific parameters.
 
-> **Line:** "The $O(\sqrt{\theta})$ is uniform over any class of pairs $(F,g)$ for which $c_{1},...,c_{6}$ are bounded above and $m_{1}, m_{2}$ are bounded below by strictly positive constants uniformly over the class."
+**Line:** "The $O(\sqrt{\theta})$ is uniform over any class of pairs $(F,g)$ for which $c_{1},...,c_{6}$ are bounded above and $m_{1}, m_{2}$ are bounded below by strictly positive constants uniformly over the class."
 
 * **The Concept:** This ensures that this approximation works consistently (uniformly) for *any* functions $F$ and $g$ you might swap in, as long as they obey the minimum and maximum boundaries established earlier. In the context of the paper, this is vital because the authors want to apply this theorem to complex, shifting probability distributions around a data manifold.
 
@@ -153,12 +166,16 @@ This is the core equation of the corollary. Because the peak is so sharp around 
 
 #### 1. The Setup and the Goal
 
-> **Line:** "Assume Assumption B.1, and let $h(x):\mathbb{R}^{d}\rightarrow\mathbb{R}$ be $C^{1}$ and uniformly bounded in $T_{\mathcal{M}}(\epsilon)$. Define $h(u,r):=h(\Phi(u,r))$."
+**Line:** "Assume Assumption B.1, and let $h(x):\mathbb{R}^{d}\rightarrow\mathbb{R}$ be $C^{1}$ and uniformly bounded in $T_{\mathcal{M}}(\epsilon)$. Define $h(u,r):=h(\Phi(u,r))$."
 
 * **The Maths:** We are bringing in the safety rules from Assumption B.1 (smoothness, compact manifold, sharp minimums). We also introduce a new function, $h(x)$, which is smooth ($C^{1}$) and doesn't blow up to infinity inside our tubular neighbourhood $T_{\mathcal{M}}(\epsilon)$. We then map it into our local coordinates $(u, r)$.
 * **The Concept:** Think of $h(x)$ as a generic "test function" or an arbitrary amplitude. The authors are setting up a general integral so this lemma can be reused flexibly later in the paper.
 
-> **Line:** "Then we have $\int_{||r||<\epsilon}\exp(-\frac{f_{\theta}(u,r)}{\theta})h(u,r)dr = \exp(-\frac{f_{0}(u,0)}{\theta})\exp(-f_{1}(u,0))\frac{(2\pi\theta)^{(d-n)/2}}{\sqrt{|\frac{\partial^{2}f_{0}}{\partial r^{2}}(u,0)|}}(h(u,0)+o(1))$, where the $o(1)$ term is uniform for $u$."
+**Line:** "Then we have"
+$$
+\int_{\|r\|<\epsilon} \exp\left(-\frac{f_{\theta}(u,r)}{\theta}\right)h(u,r)dr = \exp\left(-\frac{f_{0}(u,0)}{\theta}\right)\exp(-f_{1}(u,0))\frac{(2\pi\theta)^{(d-n)/2}}{\sqrt{\left|\frac{\partial^{2}f_{0}}{\partial r^{2}}(u,0)\right|}}(h(u,0)+o(1))
+$$
+"where the $o(1)$ term is uniform for $u$."
 
 * **The Concept:** This is the destination. They are integrating *only* over $r$ (the normal/perpendicular direction) within the tiny distance $\epsilon$ from the manifold. Because the probability forms a sharp peak right on the manifold (where $r=0$), integrating across the peak effectively collapses the equation down to evaluate everything exactly at $r=0$. The result is a scaling factor, the volume of the Gaussian peak in the $d-n$ normal dimensions, and an error term $o(1)$ that uniformly vanishes as $\theta \rightarrow 0$.
 
@@ -166,7 +183,10 @@ This is the core equation of the corollary. Because the peak is so sharp around 
 
 #### 2. The Proof: Step 1 - Unpacking the Exponent
 
-> **Line:** "We have that $\int_{||r||<\epsilon}\exp(-\frac{f_{\theta}(u,r)}{\theta})h(u,r)dr = \int_{||r||<\epsilon}\exp(-\frac{f_{0}(u,r)}{\theta})\exp(-f_{1}(u,r))h(u,r)(\exp(-\frac{\hat{f}(u,r,\theta)}{\theta}))dr$"
+**Line:** "We have that"
+$$
+\int_{\|r\|<\epsilon}\exp\left(-\frac{f_{\theta}(u,r)}{\theta}\right)h(u,r)dr = \int_{\|r\|<\epsilon}\exp\left(-\frac{f_{0}(u,r)}{\theta}\right)\exp(-f_{1}(u,r))h(u,r)\exp\left(-\frac{\hat{f}(u,r,\theta)}{\theta}\right)dr
+$$
 
 * **The Maths:** They take the target function $f_{\theta}$ and expand it into its three known parts: $f_{0} + \theta f_{1} + \hat{f}$. Because these parts are added inside an exponent, they can be separated into multiplied exponential terms using the rule $e^{A+B+C} = e^{A} e^{B} e^{C}$.
 * **The Concept:** They are isolating the dominant geometric term ($f_{0}$), the density term ($f_{1}$), and the annoying perturbation/error term ($\hat{f}$).
@@ -175,17 +195,70 @@ This is the core equation of the corollary. Because the peak is so sharp around 
 
 #### 3. The Proof: Step 2 - The "+1 / -1" Trick
 
-> **Line:** "$= \int_{||r||<\epsilon}\exp(-\frac{f_{0}(u,r)}{\theta})\exp(-f_{1}(u,r))h(u,r)dr + \int_{||r||<\epsilon}\exp(-\frac{f_{0}(u,r)}{\theta})\exp(-f_{1}(u,r))h(u,r)(\exp(-\frac{\hat{f}(u,r,\theta)}{\theta})-1)dr.$"
+**Line:** $$
+= \int_{\|r\|<\epsilon}\exp\left(-\frac{f_{0}(u,r)}{\theta}\right)\exp(-f_{1}(u,r))h(u,r)dr + \int_{\|r\|<\epsilon}\exp\left(-\frac{f_{0}(u,r)}{\theta}\right)\exp(-f_{1}(u,r))h(u,r)\left(\exp\left(-\frac{\hat{f}(u,r,\theta)}{\theta}\right)-1\right)dr
+$$
 
-* **The Maths:** Look at the last term from the previous step: $\exp(-\frac{\hat{f}}{\theta})$. They rewrite this as $(1 + [\exp(-\frac{\hat{f}}{\theta}) - 1])$. They then multiply this through the integral to split it into two separate integrals.
+* **The Maths:** Look at the last term from the previous step: $\exp(-\hat{f}/\theta)$. They rewrite this as $(1 + [\exp(-\hat{f}/\theta) - 1])$. They then multiply this through the integral to split it into two separate integrals.
 * **The Concept:** The first integral is now completely "clean"—it only contains $f_{0}$, $f_{1}$, and $h$. The second integral acts as a "bin" that captures all the messy error associated with $\hat{f}$. The rest of the proof is just solving the clean integral and proving the bin integral goes to zero.
 
 ---
 
 #### 4. The Proof: Step 3 - Solving the "Clean" Integral
 
-> **Line:** "For the first term, we can directly apply Corollary B.1 with $F(r)=f_{0}(u,r)$, $g(r)=\exp(-f_{1}(u,r))h(u,r)$, and $\Omega^{\prime}$ being the ball $\{r | ||r||\le\hat{\epsilon}\}$."
+**Line:** "For the first term, we can directly apply Corollary B.1 with $F(r)=f_{0}(u,r)$, $g(r)=\exp(-f_{1}(u,r))h(u,r)$, and $\Omega'$ being the ball $\{r \mid \|r\|\le\hat{\epsilon}\}$."
 
 * **The Concept:** They match the pieces of their clean integral to the variables required by Laplace's method (Corollary B.1). The geometric bowl $f_{0}$ becomes the exponent $F$, and the remaining functions merge to become the amplitude $g$.
 
-> **
+**Line:** "Define"
+$$
+J = \exp\left(-\frac{f_{0}(u,0)}{\theta}\right)\exp(-f_{1}(u,0))\frac{(2\pi\theta)^{(d-n)/2}}{\sqrt{\left|\frac{\partial^{2}f_{0}}{\partial r^{2}}(u,0)\right|}}
+$$
+"The first term can be approximated as $J(h(u,0)+o(1))$"
+
+* **The Maths:** By plugging the pieces directly into the formula from Corollary B.1, they get the exact result they are looking for. To save space, they bundle the bulky exponential and Gaussian volume terms into a single variable, $J$.
+
+---
+
+#### 5. The Proof: Step 4 - Trashing the Bin Integral
+
+**Line:** "The second term can be upper bounded by"
+$$
+\sup_{r}|h(u,r)| \cdot \sup_{r}\left|\exp\left(-\frac{\hat{f}(u,r,\theta)}{\theta}\right)-1\right| \int_{\|r\|<\epsilon}\exp\left(-\frac{f_{0}(u,r)}{\theta}\right)\exp(-f_{1}(u,r))dr
+$$
+
+* **The Maths:** They are trying to find the absolute maximum possible size of the second (bin) integral. They pull the amplitude $h$ and the error factor $(\exp(...) - 1)$ outside the integral by replacing them with their maximum possible values (the supremum, or $\sup$).
+
+**Line:** $$
+= o(1)J(1+o(1)) = o(1)J
+$$
+"where we used Corollary B.1 for the integral. The lower bound can be obtained similarly. The result follows."
+
+* **The Maths:** Why does it equal $o(1)J$?
+    1.  By Assumption B.1, we know $\hat{f}$ shrinks faster than $\theta$ (it is $o(\theta)$). Therefore, $\frac{\hat{f}}{\theta} \rightarrow 0$. As a result, $\exp(0) - 1 = 1 - 1 = 0$. So that entire supremum term becomes vanishingly small ($o(1)$).
+    2.  The remaining integral is just another clean integral, which evaluates to $J(1+o(1))$ via Corollary B.1.
+    3.  Multiplying a vanishing term by $J$ leaves you with $o(1)J$.
+* **The Concept:** They have successfully proven that the messy perturbation $\hat{f}$ from their original function has absolutely zero impact on the final limiting distribution as $\theta \rightarrow 0$. The proof is complete.
+
+---
+
+### Line-by-Line Breakdown of Lemma B.2
+
+**Goal:** This lemma formally proves "Concentration of Measure." It demonstrates that as the noise parameter ($\theta$) shrinks to zero, the probability distribution completely collapses onto the data manifold $\mathcal{M}$. There will be absolutely zero probability mass left anywhere else in the space.
+
+---
+
+#### 1. The Setup and Assumptions
+
+**Line:** "Let $f_{\theta}(x)=f_{0}(x)+\overline{f}(x,\theta)$, such that $\exp(-f_{\theta}(x)/\theta)$ is a normalised density function on $\mathbb{R}^{d}$."
+
+* **The Maths:** They define the exponent of the probability density as having two parts: a dominant geometric term $f_0(x)$ and an error/perturbation term $\overline{f}(x,\theta)$. 
+
+**Line:** "Suppose $\mathcal{M}$ is a connected and compact $C^{4}$ manifold without boundary. Assume that:
+1. $f_{0}(x)$ is continuous with $\arg \min_{x \in T_{\mathcal{M}}(\epsilon)} f_{0}(x) = \mathcal{M}$ and $\min_{x \in T_{\mathcal{M}}(\epsilon)} f_{0}(x) = 0$."
+
+* **The Maths:** They establish the ground rules for the geometry. Crucially, the dominant function $f_0$ reaches its absolute minimum (which is exactly zero) *only* when evaluated exactly on the manifold $\mathcal{M}$. If you evaluate a point off the manifold, $f_0(x)$ becomes strictly greater than zero.
+
+**Line:** "2. $\overline{f}(x,\theta)$ is continuous and uniformly $o(1)$ as $\theta\rightarrow 0$ for all $x\in\overline{T_{\mathcal{M}}(\epsilon)}$."
+
+* **The Maths:** The error term $\overline{f}$ vanishes completely (goes to $o(
