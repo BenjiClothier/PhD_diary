@@ -8,14 +8,53 @@ Investigating the structural limitations of K-Nearest Neighbours (K-NN) in high-
 ## 📝 To-Do List
 - [x] **Evaluate CDC Tangential Metric:** Implement the Carré-du-Champ mathematical operator as an evaluation metric to explicitly calculate tangential vs. orthogonal flow vectors on baseline models.
 - [x] **Geometric Score Function:** Understand and document the mathematical derivation for the geometric interpretation of the score function.
-- [ ] **Investigate K-NN Breakdown:** Analyse the exact mathematical point at which K-NN fails by systematically analysing the ratio of feature dimensionality to the number of available data points.
+- [x] **Investigate K-NN Breakdown:** Analyse the exact mathematical point at which K-NN fails by systematically analysing the ratio of feature dimensionality to the number of available data points.
 - [x] **Establish rigid K-NN Baseline:** Finalise a solid baseline for Anomaly Detection (AD) that relies purely on K-NN (e.g., Euclidean distance tracking), ensuring we have a strictly defined performance threshold to beat.
-- [ ] **Develop Sub-Manifold Generalisation:** Train a generative neural network that structurally outperforms the K-NN baseline by successfully learning to interpolate and generalise the continuous sub-manifold geometry *between* sparse data points.
+- [ ] **Develop Sub-Manifold Generalisation:** Train a generative neural network that structurally outperforms the K-NN baseline by successfully learning to interpolate and generalise the continuous sub-manifold geometry between data points.
 
 ---
 
 ## 🔬 Progress & Experiments
 
+# Paper Summary: When Is "Nearest neighbour" Meaningful?
+
+**Authors:** Kevin Beyer, Jonathan Goldstein, Raghu Ramakrishnan, and Uri Shaft (1999)
+
+## Core Contribution
+The paper investigates the "curse of dimensionality" as it applies to the Nearest Neighbour (NN) problem. The authors mathematically prove and empirically demonstrate that, under a broad set of conditions, as dimensionality increases, the distance to the nearest data point converges to the distance to the farthest data point. Consequently, the concept of a "nearest" neighbour loses its meaningfulness because all points become virtually equidistant from the query point.
+
+## The Mathematical Breakdown: "Instability"
+* **Definition of Instability:** A nearest neighbour query is defined as "unstable" for a given $\epsilon$ if the distance to most data points is less than $(1+\epsilon)$ times the distance to the nearest neighbour. 
+* **Theorem 1 (Distance Concentration):** The authors prove that if the variance of a scaled distance distribution converges to zero as the number of dimensions $m$ approaches infinity, then the ratio of the maximum distance to the minimum distance converges to 1.
+* **Generality:** This breakdown occurs under conditions much broader than just strictly independent and identically distributed (IID) dimensions, affecting workloads with correlated attributes and varying dimensional variances.
+
+## Empirical Thresholds
+While the theorem describes behavior as dimensions approach infinity, the paper's experiments show that the collapse of distance contrast happens at surprisingly low dimensions.
+* In synthetic workloads, the distinction between the nearest and farthest points drops rapidly; at 10 dimensions, the contrast can be reduced by 6 orders of magnitude compared to one dimension.
+* By 20 dimensions, the farthest point in a uniform dataset might be only 4 times the distance of the closest point.
+* The empirical results suggest that nearest neighbour queries can become unstable with as few as 10 to 15 dimensions.
+
+## When is High-Dimensional NN Actually Meaningful?
+The authors clarify that high-dimensional nearest neighbour queries are not always useless. They remain meaningful in specific scenarios:
+* **Exact or Near-Exact Matches:** When the query point is an exact duplicate or exceptionally close to a specific data point.
+* **Clustered Data:** In classification problems where data naturally groups into well-separated clusters, provided the query point falls within or very close to one of these clusters.
+* **Implicitly Low Dimensionality:** When the actual, intrinsic dimensionality of the data is much lower than the ambient high-dimensional space it resides in.
+
+## Why PatchCore Works (Despite High Dimensions)
+
+PatchCore successfully uses Nearest neighbour (NN) for anomaly detection in high-dimensional spaces by exploiting specific geometric exceptions to the "curse of dimensionality." 
+
+### 1. Implicitly Low Dimensionality
+While PatchCore extracts features with high ambient dimensions (e.g., 1024-D from a pre-trained Wide ResNet-50), the actual meaningful variations of natural image features trace out a much smoother, lower-dimensional manifold. NN remains mathematically meaningful when the underlying dimensionality of the data is much lower than the actual dimensionality. 
+
+### 2. The Clustered Data Exception
+NN queries remain highly effective when data naturally falls into discrete classes or clusters in some potentially high dimensional feature space. PatchCore's normal training features (valid textures and edges) form  dense clusters. Anomaly detection simply measures whether a test patch falls safely inside one of these known clusters or is isolated out in empty space.
+
+### 3. Greedy Coreset Subsampling
+If PatchCore retained every training feature, dense regions could suffer from localised distance concentration. By using Greedy K-Center Coreset selection, the algorithm aggressively spaces out the saved features to map only the boundaries and structure of the normal manifold. This preserves geometric contrast and prevents the neighbourhood collapse that occurs when sample sizes overwhelm the space.
+
+### 4. neighbourhood-Penalized Scoring
+Instead of relying solely on the absolute distance to a single nearest neighbour, PatchCore evaluates the local neighbourhood density of that match. By incorporating the distances to the $K$ nearest neighbours *within the coreset*, it penalizes matches that belong to sparse, isolated regions. This prevents random high-dimensional noise from masking true anomalies.
 ---
 
 ## 📊 Results & Insights
