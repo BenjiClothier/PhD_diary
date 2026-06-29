@@ -16,6 +16,52 @@ Investigating the structural limitations of K-Nearest Neighbours (K-NN) in high-
 
 ## 🔬 Progress & Experiments
 
+# Carre du Champ Operator For Manifold Aware Anomaly Detection
+
+## The Carre du Champ Operator: A Summary
+The carré du champ (French for "square of the field") is a fundamental mathematical operator that bridges probability theory, stochastic analysis, and differential geometry. The CDC operator, denoted by $\Gamma$, allowa us to extract the local curvature of a scape purely from how things spread within that space.
+
+For a given mathematical operator $L$ and two functions $f$ and $g$, the carré du champ is defined as:
+$$
+\Gamma(f,g) = \frac{1}{2}(L(fg) - fL(g) - gL(f))
+$$
+
+When analysing a single function (measuring its own internal variation), we evaluate $f$ against itself:
+$$
+\Gamma(f,g) = \frac{1}{2}(L(f^2) - 2fL(f))
+$$
+
+The operator $L$ is known as the infinitesimal generator (often a Markov generator or a Laplacian operator, like $\Delta$). $L$ describes how a process, like heat, a random walk or a probability distribution, evolves over time.
+
+$f$ and $g$ are scalar functions defined on the state space. They are the observables of the space. By feeding these functions into the generator $L$, we observe how these specific properties change as the system evolves.
+
+To understand why the equation is structured the way it is, we have to look at the Leibniz product rule from standard calculus. For a standard, first-order derivative (let's call it $D$), the product rule states:
+$$
+D(fg) = fD(g) + gD(f)
+$$
+If we rewrite this to equal zero, we get:
+$$
+D(fg) - fD(g) - gD(f) = 0
+$$
+
+The generator $L$ (like a diffusion operator) is typically a second-order differential operator. Because it is second-order, it fails to obey the first-order Leibniz product rule perfectly. The carré du champ equation calculates the amount $L$ breaks this rule. The result measures the variance or squared gradient of the system.
+
+If we set the generator $L$ to be the standard Laplacian ($\Delta$) from Euclidean geometry, we can see exactly what the CDC operator extracts.Using the identity $\Delta(f^2) = 2f\Delta(f) + 2|\nabla f|^2$, we plug it into the CDC equation:
+$$
+\Gamma(f, f) = \frac{1}{2} \big( 2f\Delta(f) + 2|\nabla f|^2 - 2f\Delta(f) \big)
+$$
+$$
+\Gamma(f, f) = |\nabla f|^2
+$$
+
+## Calculating the CDC operator
+For our work, calculating the CDC operator means evaluating how a specific vector interacts with the local geometry of your data manifold. We then use this to measure the orthogonal movement from the data manifold.
+
+Before we can project our vector, we must define the shape of the manifold beneath it. This is done by building a discrete transition matrix.
+
+- **Find Neighbours: 
+
+
 # Paper Summary: When Is "Nearest neighbour" Meaningful?
 
 **Authors:** Kevin Beyer, Jonathan Goldstein, Raghu Ramakrishnan, and Uri Shaft (1999)
@@ -53,8 +99,9 @@ NN queries remain highly effective when data naturally falls into discrete class
 ### 3. Greedy Coreset Subsampling
 If PatchCore retained every training feature, dense regions could suffer from localised distance concentration. By using Greedy K-Center Coreset selection, the algorithm aggressively spaces out the saved features to map only the boundaries and structure of the normal manifold. This preserves geometric contrast and prevents the neighbourhood collapse that occurs when sample sizes overwhelm the space.
 
-### 4. neighbourhood-Penalized Scoring
-Instead of relying solely on the absolute distance to a single nearest neighbour, PatchCore evaluates the local neighbourhood density of that match. By incorporating the distances to the $K$ nearest neighbours *within the coreset*, it penalizes matches that belong to sparse, isolated regions. This prevents random high-dimensional noise from masking true anomalies.
+### 4. Neighbourhood-Penalised Scoring
+Instead of relying solely on the absolute distance to a single nearest neighbour, PatchCore evaluates the local neighbourhood density of that match. By incorporating the distances to the $K$ nearest neighbours within the coreset, it penalises matches that belong to sparse, isolated regions. This prevents random high-dimensional noise from masking true anomalies.
+
 ---
 
 ## 📊 Results & Insights
