@@ -22,37 +22,39 @@ Investigating the structural limitations of K-Nearest Neighbours (K-NN) in high-
 The carré du champ (French for "square of the field") is a fundamental mathematical operator that bridges probability theory, stochastic analysis, and differential geometry. The CDC operator, denoted by $\Gamma$, allowa us to extract the local curvature of a scape purely from how things spread within that space.
 
 For a given mathematical operator $L$ and two functions $f$ and $g$, the carré du champ is defined as:
-$$
+```math
 \Gamma(f,g) = \frac{1}{2}(L(fg) - fL(g) - gL(f))
-$$
+```
 
 When analysing a single function (measuring its own internal variation), we evaluate $f$ against itself:
-$$
+```math
 \Gamma(f,g) = \frac{1}{2}(L(f^2) - 2fL(f))
-$$
+```
 
 The operator $L$ is known as the infinitesimal generator (often a Markov generator or a Laplacian operator, like $\Delta$). $L$ describes how a process, like heat, a random walk or a probability distribution, evolves over time.
 
 $f$ and $g$ are scalar functions defined on the state space. They are the observables of the space. By feeding these functions into the generator $L$, we observe how these specific properties change as the system evolves.
 
 To understand why the equation is structured the way it is, we have to look at the Leibniz product rule from standard calculus. For a standard, first-order derivative (let's call it $D$), the product rule states:
-$$
+
+```math
 D(fg) = fD(g) + gD(f)
-$$
+```
 If we rewrite this to equal zero, we get:
-$$
+
+```math
 D(fg) - fD(g) - gD(f) = 0
-$$
+```
 
 The generator $L$ (like a diffusion operator) is typically a second-order differential operator. Because it is second-order, it fails to obey the first-order Leibniz product rule perfectly. The carré du champ equation calculates the amount $L$ breaks this rule. The result measures the variance or squared gradient of the system.
 
 If we set the generator $L$ to be the standard Laplacian ($\Delta$) from Euclidean geometry, we can see exactly what the CDC operator extracts.Using the identity $\Delta(f^2) = 2f\Delta(f) + 2|\nabla f|^2$, we plug it into the CDC equation:
-$$
+```math
 \Gamma(f, f) = \frac{1}{2} \big( 2f\Delta(f) + 2|\nabla f|^2 - 2f\Delta(f) \big)
-$$
-$$
+```
+```math
 \Gamma(f, f) = |\nabla f|^2
-$$
+```
 
 ## Calculating the CDC operator
 For our work, calculating the CDC operator means evaluating how a specific vector interacts with the local geometry of your data manifold. We then use this to measure the orthogonal movement from the data manifold.
