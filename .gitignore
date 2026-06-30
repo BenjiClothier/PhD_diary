@@ -18,6 +18,8 @@
 *.cb
 *.cb2
 *.xdv
+*.nav
+*.snm
 
 # ---------------------------------------------------
 # Generated Output Files (PDF, DVI, PS)
