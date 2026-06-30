@@ -65,21 +65,21 @@ Before we can project our vector, we must define the shape of the manifold benea
 - **Find Neighbours**: For a given point, find its $K$-nearest neighbours in our training data 'bank'.
 - **Apply Kernel**: Convert the distances to those neighbours into similarity weights using a Gaussian kernel with a fixed bandwidth parameter ($\epsilon$).
 - **Normalise for Density**: Apply Coifman-Lafon density normalisation. This ensures that regions with heavily clumped data do not artificially skew the geometry. This gives a set of robust transition probabilities ($P$) for the local neighbourhood.
-  ```math
-  W_{i,j} = \exp(-\frac{||x_i - x_j||^2}{\epsilon})
-  ```
+```math
+W_{i,j} = \exp(-\frac{||x_i - x_j||^2}{\epsilon})
+```
   - **Estimate the local density**($q$): Count how much weight is around point $i$
-  ```math
-  q_i = \sum_j W_{i,j}
-  ```
+```math
+q_i = \sum_j W_{i,j}
+```
   - **Normalise the kernel**($\tilde{W}$): Divide the pairwise similarities by the densities of both points.
-  ```math
-  \tilde{W}_{i,j} = \frac{W_{i,j}}{q_iq_j}
-  ```
+```math
+\tilde{W}_{i,j} = \frac{W_{i,j}}{q_iq_j}
+```
   - **Create the Markov transition matrix**($P$): Row-normalise the new density-free weights so they sum to 1.
-  ```math
-  P_{ij} = \frac{\tilde{W}_{ij}}{\sum_k \tilde{W}_{ik}}
-  ```
+```math
+P_{ij} = \frac{\tilde{W}_{ij}}{\sum_k \tilde{W}_{ik}}
+```
   The matrix $P$ represents an unbiased random walk on the training manifold.
 
 #### Tying it back to the Carre du Champ($\Gamma$)
@@ -129,11 +129,11 @@ The CDC operator extracts the gradient information by projecting the incoming ve
 This operation squashes the vector $\nu$ flat against the local geometry established in Step 1.
 
 ### Step 4: Enforce Strict Orthogonal Projection
-Because discrete approximations of manifolds scale inherently with the intrinsic dimensionality of the data, $\nu_{\text{tan\_raw}}$ gives the mathematically correct direction of the tangent space, but its magnitude is not a strict projection.
+Because discrete approximations of manifolds scale inherently with the intrinsic dimensionality of the data, $\nu_{tan\_raw}$ gives the mathematically correct direction of the tangent space, but its magnitude is not a strict projection.
 
-We normalise $\nu_{\text{tan\_raw}}$ in to a unit vector ($\nu_{\text{tan\_dir}}$) and explicitly project our original drift vector $\nu$ onto it:
+We normalise $\nu_{tan\_raw}$ in to a unit vector ($\nu_{tan\_dir}$) and explicitly project our original drift vector $\nu$ onto it:
 ```math
-\nu_{\text{tan}} = \langle \nu, \nu_{\text{tan\_dir}} \rangle \nu_{\text{tan\_dir}}
+\nu_{tan} = \langle \nu, \nu_{tan\_dir} \rangle \nu_{tan\_dir}
 ```
 This gives us the tangential flow, the movement that safely adheres to the structural rules of the training data.
 
@@ -147,7 +147,12 @@ A large $\nu_{\text{ortho}}$ magnitude indicates that the generative process is 
 ## Implementing a Tangental Repulsion field for Drifting
 
 ### Objective
-In drifting our repulsive field is used to push generated points ($x_{\text{gen}}$) away from other generated points to prevent mode collapse. 
+In drifting our repulsive field $V^-$ is used to push generated points ($x_{\text{gen}}$) away from other generated points to prevent mode collapse. Our objective is to utilise our CDC operator to allow $V^-$ to respect the structural rules of the underlying data. 
+
+### The Ambient Problem
+Standard repulsive fields operate in the high-dimensional embedding space. If two generated points get too close, the repulsive force $V^-$ pushes them directly apart.
+
+Because the data manifold is a thin, curved surface within this massive space, a direct ambient repulsion will almost certainly push the points off the manifold. 
 
 
 ---
@@ -197,7 +202,39 @@ Instead of relying solely on the absolute distance to a single nearest neighbour
 
 ## 📊 Results & Insights
 
-## Average Performance Summary Across All MVTec Categories
+## Patchcore Baseline Results
+
+| Category | Image AUROC | Patch AUROC |
+| :--- | :---: | :---: |
+| **bottle** | 1.0000 | 0.9856 |
+| **cable** | 0.9906 | 0.9850 |
+| **capsule** | 0.9912 | 0.9901 |
+| **carpet** | 0.9868 | 0.9907 |
+| **grid** | 0.9891 | 0.9835 |
+| **hazelnut** | 1.0000 | 0.9884 |
+| **leather** | 1.0000 | 0.9923 |
+| **metal_nut** | 0.9971 | 0.9870 |
+| **pill** | 0.9463 | 0.9813 |
+| **screw** | 0.9596 | 0.9892 |
+| **tile** | 1.0000 | 0.9554 |
+| **toothbrush**| 0.9194 | 0.9889 |
+| **transistor**| 0.9942 | 0.9727 |
+| **wood** | 0.9860 | 0.9314 |
+| **zipper** | 0.9756 | 0.9813 |
+
+#### 1. Image AUROC (Global Detection)
+* **What it measures:** Can the model tell if an *entire image* is defective or normal?
+* **How it works:** The model assigns a single anomaly score to the whole image (usually by taking the maximum patch score in the image). 
+* **Example:** If you feed the model an image of a scratched bottle, Image AUROC measures if the model correctly flags the whole bottle as "Anomalous".
+
+
+#### 2. Patch AUROC (Local Localization)
+* *(Note: In the MVTec / Anomalib community, this is also frequently called Pixel AUROC.)*
+* **What it measures:** Can the model pinpoint *exactly where* the defect is located?
+* **How it works:** The model evaluates every single patch against the ground-truth segmentation masks provided in the dataset.
+* **Example:** For that same scratched bottle, Patch AUROC measures if the model specifically highlighted the scratch itself, while keeping the score for the rest of the pristine glass very low.
+
+## Average Performance Summary Across All MVTec Categories For Various Drift Metrics
 
 | Method | Avg Init | Avg Map | Avg Drift | Avg $V_{tan}$ |
 |:---|---:|---:|---:|---:|
