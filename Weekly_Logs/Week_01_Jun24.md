@@ -56,15 +56,104 @@ If we set the generator $L$ to be the standard Laplacian ($\Delta$) from Euclide
 \Gamma(f, f) = |\nabla f|^2
 ```
 
-## Calculating the CDC operator
+## Calculating the CDC operator and orthogonal flow anomaly metric
 For our work, calculating the CDC operator means evaluating how a specific vector interacts with the local geometry of your data manifold. We then use this to measure the orthogonal movement from the data manifold.
 
 Before we can project our vector, we must define the shape of the manifold beneath it. This is done by building a discrete transition matrix.
 
-- **Find Neighbours: 
+### Step 1: Construct the Local Geometry (The Graph Laplacian)
+- **Find Neighbours**: For a given point, find its $K$-nearest neighbours in our training data 'bank'.
+- **Apply Kernel**: Convert the distances to those neighbours into similarity weights using a Gaussian kernel with a fixed bandwidth parameter ($\epsilon$).
+- **Normalise for Density**: Apply Coifman-Lafon density normalisation. This ensures that regions with heavily clumped data do not artificially skew the geometry. This gives a set of robust transition probabilities ($P$) for the local neighbourhood.
+  ```math
+  W_{i,j} = \exp(-\frac{||x_i - x_j||^2}{\epsilon})
+  ```
+  - **Estimate the local density**($q$): Count how much weight is around point $i$
+  ```math
+  q_i = \sum_j W_{i,j}
+  ```
+  - **Normalise the kernel**($\tilde{W}$): Divide the pairwise similarities by the densities of both points.
+  ```math
+  \tilde{W}_{i,j} = \frac{W_{i,j}}{q_iq_j}
+  ```
+  - **Create the Markov transition matrix**($P$): Row-normalise the new density-free weights so they sum to 1.
+  ```math
+  P_{ij} = \frac{\tilde{W}_{ij}}{\sum_k \tilde{W}_{ik}}
+  ```
+  The matrix $P$ represents an unbiased random walk on the training manifold.
+
+#### Tying it back to the Carre du Champ($\Gamma$)
+How does the matrix $P$ fit into the carre du champ operator?
+```math
+\Gamma(f,g) = \frac{1}{2}(L(fg) - fL(g) - gL(f))
+```
+First, we need the infinitesimal generator $L$. In a discrete Markov chain, the generator that describes how functions change over one time step is $L = P - I$ (where $I$ is the identity matrix).
+
+When you apply this discrete $L$ to a function $f$ evaluated at point $x_i$, it looks like this:
+```math
+L(f)(x_i) = \sum_j P_{ij} \big( f(x_j) - f(x_i) \big)
+```
+The change in $f$ is the weighted average of how much $f$ differs between you and your neighbours.
+For a single function $\Gamma(f,f)$:
+```math
+\Gamma(f, f)(x_i) = \frac{1}{2} \Big( \sum_j P_{ij} \big( f(x_j)^2 - f(x_i)^2 \big) - 2f(x_i) \sum_j P_{ij} \big( f(x_j) - f(x_i) \big) \Big)
+```
+Simplify the terms in the brackets:
+```math
+f(x_j)^2 - 2f(x_i)f(x_j) + f(x_i)^2
+```
+This is a perfect square. $(a^2 - 2ab + b^2 = (a-b)^2)$. So the entire Carré du Champ equation collapses into:
+```math
+\Gamma(f, f)(x_i) = \frac{1}{2} \sum_j P_{ij} \big( f(x_j) - f(x_i) \big)^2
+```
+
+### Step 2: Define the Local Chords
+n the abstract derivation above, $f$ represents a single scalar function. However, in our model, our points exist in a high-dimensional feature space (e.g., $\mathbb{R}^D$). Therefore, we treat $f$ as the coordinate functions of our data.Rather than evaluating one dimension at a time, we evaluate all $D$ coordinate functions simultaneously. The term $\big( f(x_j) - f(x_i) \big)$ becomes the vector difference between a point and its neighbors. We call these the local chords ($\Delta$):
+```math
+\Delta = x_j - x_i
+```
+These chords represent the discrete geometric vectors that stitch the local surface of the manifold together.
+
+### Step 3: Compute the Raw CDC Direction
+First let's define our drift vector $\nu$:
+```math
+\nu = f_{\theta}(x) - x
+```
+This is the vector from our input to our trained network output.
+
+With the local surface defined by the transition matrix ($P$) and the local chords ($\Delta$), we can evaluate how our drift vector ($\nu$) interacts with the manifold.
+The CDC operator extracts the gradient information by projecting the incoming vector onto the local chords, weighted by the transition probabilities. We calculate the dot product of $\nu$ with each chord, scale it by $P_{ij}$, and sum the results to find the raw tangent direction:
+```math
+\nu_{\text{raw\_tan}} = \sum_j P_{ij} \langle \Delta, \nu \rangle \Delta
+```
+This operation squashes the vector $\nu$ flat against the local geometry established in Step 1.
+
+### Step 4: Enforce Strict Orthogonal Projection
+Because discrete approximations of manifolds scale inherently with the intrinsic dimensionality of the data, $\nu_{\text{tan\_raw}}$ gives the mathematically correct direction of the tangent space, but its magnitude is not a strict projection.
+
+We normalise $\nu_{\text{tan\_raw}}$ in to a unit vector ($\nu_{\text{tan\_dir}}$) and explicitly project our original drift vector $\nu$ onto it:
+```math
+\nu_{\text{tan}} = \langle \nu, \nu_{\text{tan\_dir}} \rangle \nu_{\text{tan\_dir}}
+```
+This gives us the tangential flow, the movement that safely adheres to the structural rules of the training data.
+
+### Step 5: Extract the Orthogonal Flow (Measuring the Anomaly)
+Finally, because we enforced a strict orthogonal projection, we can use simple vector subtraction to isolate the component of the drift that tears away from the manifold. This is our anomaly metric:
+```math
+\nu_{\text{ortho}} = \nu - \nu_{\text{tan}}
+```
+A large $\nu_{\text{ortho}}$ magnitude indicates that the generative process is breaking away from the established data structure,
+
+## Implementing a Tangental Repulsion field for Drifting
+
+### Objective
+In drifting our repulsive field is used to push generated points ($x_{\text{gen}}$) away from other generated points to prevent mode collapse. 
 
 
-# Paper Summary: When Is "Nearest neighbour" Meaningful?
+---
+---
+
+# Paper Summary: When Is "Nearest Neighbour" Meaningful?
 
 **Authors:** Kevin Beyer, Jonathan Goldstein, Raghu Ramakrishnan, and Uri Shaft (1999)
 
