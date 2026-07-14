@@ -27,11 +27,50 @@ The initial implementation attempted a "matrix-free" projection using a weighted
 
 To resolve these issues, we restructured the algorithm to execute a true, unweighted orthogonal projection onto a dynamically sized, tangent plane.
 
-1. The "Landing Zone" AnchorInstead of building the tangent plane at the anomaly in empty space, we shifted the origin of our step vectors to the anomaly's nearest neighbor in the training set ($x_{nn}$).$$\Delta_m = X_m - x_{nn}$$This guarantees the basis vectors span a perfectly flat plane that accurately reflects the true surface of the manifold. When an anomaly vector $V$ crashes into this flat plane, it is correctly recognized as orthogonal.
+1. Instead of building the tangent plane at the anomaly in empty space, we shifted the origin of our step vectors to the anomaly's nearest neighbor in the training set ($x_{nn}$).$$\Delta_m = X_m - x_{nn}$$This guarantees the basis vectors span a perfectly flat plane that accurately reflects the true surface of the manifold. When an anomaly vector $V$ crashes into this flat plane, it is correctly recognized as orthogonal.
 
-2. Local SVD for a True Orthonormal BasisTo fix the 1D covariance collapse, we bypassed the $D \times D$ covariance matrix entirely by performing Singular Value Decomposition (SVD) directly on the probability-weighted difference matrix:$$\tilde{X} = \sqrt{P_{x \rightarrow m}} \Delta_m$$ By extracting the right singular vectors of this small $K \times D$ matrix, we obtain the true, unweighted orthonormal basis vectors of the tangent space, removing the distorting effect of the local data density.
+2. To fix the 1D covariance collapse, we bypassed the $D \times D$ covariance matrix entirely by performing Singular Value Decomposition (SVD) directly on the probability-weighted difference matrix:$$\tilde{X} = \sqrt{P_{x \rightarrow m}} \Delta_m$$ By extracting the right singular vectors of this small $K \times D$ matrix, we obtain the true, unweighted orthonormal basis vectors of the tangent space, removing the distorting effect of the local data density.
 
-3. Dynamic Intrinsic Dimension via Variance MaskingBecause high-dimensional feature spaces (like Wide-ResNet50) have varying intrinsic dimensionality across different regions of the manifold, hardcoding the tangent space dimension ($m=5$) discards valid tangential flow.We introduced a dynamic variance mask by squaring the singular values ($\sigma_i^2$) to calculate the explained variance. The algorithm now dynamically selects the exact number of basis vectors required to capture 90% of the local geometric variance for each individual point in the batch.
+3. Because high-dimensional feature spaces (like Wide-ResNet50) may have varying intrinsic dimensionality across different regions of the data structure, hardcoding the tangent space dimension ($m=5$) discards valid tangential flow. We introduced a dynamic variance mask by squaring the singular values ($\sigma_i^2$) to calculate the explained variance. The algorithm now dynamically selects the exact number of basis vectors required to capture 90% of the local geometric variance for each individual point in the batch. This follows the ad-hoc dimension estimation of Ansuini et. al[^1]. 
+
+4. This heuristic is producing good results so far, but it would be better to replace with the Participation Ratio. After an eigen-gap analysis the data showed that the local spectra are smooth power-law curves. Instead of searching for a gap or setting a percentage, we can the entire spectrum to calculate a continuous intrinsic dimension:$$PR = \frac{(\sum_{i=1}^n \lambda_i)^2}{\sum_{i=1}^n \lambda_i^2}$$
+- If the variance is concentrated in just 1 dimension, $PR = 1$. 
+- If the variance is spread perfectly evenly across all $n$ dimensions, $PR = n$.
+- For a smooth curve, it naturally outputs the "effective" number of dimensions without requiring manual thresholds.
+
+```python
+# Magic number heuristic
+cumulative_variance = torch.cumsum(eigenvalues, dim=1) / total_variance
+mask = (cumulative_variance <= 0.90).float()
+```
+
+```python
+# Calculate continuous intrinsic dimension mathematically
+pr = (torch.sum(eigenvalues, dim=1)**2) / torch.sum(eigenvalues**2, dim=1)
+
+# Round to the nearest integer dimension
+d_intrinsic = torch.round(pr).long()
+
+# Create a dynamic mask that keeps the first 'd_intrinsic' eigenvectors
+N, max_d = eigenvalues.shape
+indices = torch.arange(max_d, device=DEVICE).expand(N, max_d)
+mask = (indices < d_intrinsic.unsqueeze(1)).float()
+```
+
+### Method
+
+**Phase 1: Feature Extraction**
+- WideResNet-50: Multiple layers from a pre-trained encoder are dynamically selected depending on category and concatenated. This creates a high-dimensional representation
+
+- $3 \times 3$ Average Pooling: We apply a sliding $3\times3$ Average Pool ($stride=1, padding=1$) across the feature maps.
+
+**Phase 2: Local Geometry (The Tangent Space)**
+
+
+**Phase 3: The Generative Vector Field**
+
+
+**Phase 4: Inference & Orthogonal Anomaly Scoring**
 
 ---
 
@@ -41,4 +80,9 @@ To resolve these issues, we restructured the algorithm to execute a true, unweig
 ---
 
 ## ⏭️ Next Steps
+
+
+## References
+
+[^1]: Ansuini, A., Laio, A., Macke, J. H., & Zoccolan, D. (2019). Intrinsic dimension of data representations in deep neural networks. *Advances in Neural Information Processing Systems*, 32. [arXiv:1905.12784](https://arxiv.org/abs/1905.12784)
 
