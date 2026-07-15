@@ -12,7 +12,7 @@ Validate and document the discrete Carré du Champ (CDC) orthogonal projection m
 
 - [ ] Theory & Methodology Write-Up: Draft the formal theory and methodology sections explaining the CDC decomposition and the mathematical logic behind the architecture.
 
-- [ ] MVTec Evaluation: Compile, format, and present the anomaly detection results using CDC-drifting on the MVTec dataset.
+- [x] MVTec Evaluation: Compile, format, and present the anomaly detection results using CDC-drifting on the MVTec dataset.
 
 ---
 
@@ -109,6 +109,34 @@ It successfully achieves perfect or near-perfect performance on the hardest topo
 *   **Capsule:** (0.9792 $\rightarrow$ 0.9924)
 
 ---
+
+# PatchCore Configuration Benchmark: IM224 (Single) vs IM320 (Ensemble)
+
+The following table compares the performance of the standard PatchCore configuration (WideResNet-50, $224 \times 224$ images) against the heavy Ensemble configuration (WideResNet-50 + ResNeXt-101, $320 \times 320$ images).
+
+### Image-Level AUROC Comparison
+
+| Category | IM224 WR-50 (Baseline) | IM320 Ensemble | Improvement |
+| :--- | :--- | :--- | :--- |
+| **bottle** | 1.0000 | 1.0000 | 0.0000 |
+| **cable** | 0.9968 | 0.9979 | +0.0011 |
+| **capsule** | 0.9792 | 0.9868 | +0.0076 |
+| **carpet** | 0.9859 | 0.9963 | +0.0104 |
+| **grid** | 0.9791 | 0.9949 | +0.0158 |
+| **hazelnut** | 1.0000 | 1.0000 | 0.0000 |
+| **leather** | 1.0000 | 1.0000 | 0.0000 |
+| **metal_nut** | 0.9990 | 1.0000 | +0.0010 |
+| **pill** | 0.9667 | 0.9833 | +0.0166 |
+| **screw** | 0.9877 | 0.9924 | +0.0047 |
+| **tile** | 0.9949 | 0.9877 | -0.0072 |
+| **toothbrush**| 1.0000 | 1.0000 | 0.0000 |
+| **transistor**| 0.9987 | 0.9987 | 0.0000 |
+| **wood** | 0.9912 | 0.9973 | +0.0061 |
+| **zipper** | 0.9950 | 0.9968 | +0.0018 |
+| **Mean** | **0.9916** | **0.9955** | **+0.0039** |
+
+---
+
 
 ## ⏭️ Next Steps
 
