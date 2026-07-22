@@ -1,14 +1,13 @@
 # Weekly Log: [Date Range]
 
 ## 🎯 Focus of the Week
-*Briefly describe the overarching goal for this week.*
-
+Investigate and justify CDC, evaluate a more challenging baseline, and conduct ablation studies on the effectiveness of the Markov transition matrix $P$ (comparing no matrix, $W$, $\tilde{W}$, and $P$).
 ---
 
 ## 📝 To-Do List
-- [ ] Task 1
-- [ ] Task 2
-- [ ] Task 3
+- [ ] Justify CDC
+- [ ] Find and evaluate a harder baseline (Note: this task took up all of this week's time)
+- [ ] Perform ablation study on the effectiveness of the transition matrix $P$ (test: no $P$, use $W$, use $\tilde{W}$, use $P$)
 
 ---
 
