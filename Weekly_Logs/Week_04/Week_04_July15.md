@@ -6,7 +6,7 @@ Investigate and justify CDC, evaluate a more challenging baseline, and conduct a
 
 ## 📝 To-Do List
 - [ ] Justify CDC
-- [ ] Find and evaluate a harder baseline (Note: this task took up all of this week's time)
+- [x] Find and evaluate a harder baseline (Note: this task took up all of this week's time)
 - [ ] Perform ablation study on the effectiveness of the transition matrix $P$ (test: no $P$, use $W$, use $\tilde{W}$, use $P$)
 
 ---
