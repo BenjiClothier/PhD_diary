@@ -348,7 +348,95 @@ $$
 
 ---
 
+# Joint Estimation of Intrinsic Dimension ($d$) and Topological Delay ($\tau$) via Local Spectral Gap
 
+## Overview
+This algorithm estimates the optimal topological delay ($\tau^*$) and intrinsic dimensionality ($d^*$) of a univariate time series. It evaluates the local geometric structure of the delay-embedded phase space by measuring the distribution of variance across orthogonal principal components. The algorithm identifies the combination of parameters that yields the most distinct separation between the manifold tangent space and the orthogonal noise floor, while strictly avoiding topological collapse and rank-deficiency artefacts.
+
+## Algorithmic Parameters
+*   $X = \{x_1, \dots, x_N\}$: Univariate time series, standardised to zero mean and unit variance.
+*   $m$: Ambient embedding dimension. This is parameterised at a low value (e.g., $m=10$) to satisfy Takens' Embedding Theorem ($m \ge 2d + 1$) whilst mitigating the Curse of Dimensionality.
+*   $k$: Local neighbourhood size. Restricted to satisfy both the rank condition ($k > m$) and the locality condition ($k \ll N$).
+*   $\mathcal{T}$: Set of candidate temporal delays $\{1, 2, \dots, \tau_{\max}\}$.
+*   $N_{ref}$: Number of reference points uniformly sampled to estimate global properties from local geometries.
+*   $\epsilon_{collapse}$: Threshold to filter trivial topological collapse (typically $0.10$).
+
+## Procedure
+
+### Step 1: Phase Space Reconstruction
+For each candidate delay $\tau \in \mathcal{T}$, construct the delay-embedded trajectory matrix $\boldsymbol{Y}(\tau) \in \mathbb{R}^{N_\tau \times m}$, where $N_\tau = N - (m-1)\tau$. The $i$-th phase space vector is defined as:
+$$ \boldsymbol{y}_i(\tau) = [x_i, x_{i+\tau}, \dots, x_{i+(m-1)\tau}] $$
+
+### Step 2: Local Neighbourhood Extraction
+Uniformly sample a subset of $N_{ref}$ reference vectors from $\boldsymbol{Y}(\tau)$. For each reference vector $\boldsymbol{y}_i(\tau)$, query a spatial index (e.g., KD-Tree) using Euclidean distance to extract its $k$-nearest spatial neighbours, denoted as $\mathcal{N}_k(\boldsymbol{y}_i)$.
+
+### Step 3: Local Covariance Computation
+Compute the local mean vector $\boldsymbol{\mu}_i$ and the local covariance matrix $\boldsymbol{\Sigma}_i(\tau) \in \mathbb{R}^{m \times m}$ for each reference neighbourhood:
+$$ \boldsymbol{\mu}_i = \frac{1}{k} \sum_{\boldsymbol{y}_j \in \mathcal{N}_k(\boldsymbol{y}_i)} \boldsymbol{y}_j $$
+$$ \boldsymbol{\Sigma}_i(\tau) = \frac{1}{k} \sum_{\boldsymbol{y}_j \in \mathcal{N}_k(\boldsymbol{y}_i)} (\boldsymbol{y}_j - \boldsymbol{\mu}_i)(\boldsymbol{y}_j - \boldsymbol{\mu}_i)^T $$
+
+### Step 4: Spectral Decomposition and Normalisation
+Execute an eigendecomposition on each local covariance matrix to extract the eigenvalues, sorted in descending order:
+$$ \lambda_1^{(i)}(\tau) \ge \lambda_2^{(i)}(\tau) \ge \dots \ge \lambda_m^{(i)}(\tau) \ge 0 $$
+Calculate the fractional variance for each principal component $c \in \{1, \dots, m\}$, averaged across all $N_{ref}$ local neighbourhoods to yield the global spectral profile $\bar{p}_c(\tau)$:
+$$ \bar{p}_c(\tau) = \frac{1}{N_{ref}} \sum_{i=1}^{N_{ref}} \frac{\lambda_c^{(i)}(\tau)}{\sum_{j=1}^m \lambda_j^{(i)}(\tau)} $$
+
+### Step 5: Trivial Collapse Filtration
+As $\tau \to 0$, consecutive temporal coordinates become perfectly correlated, causing the phase space trajectory to collapse onto the 1-dimensional identity diagonal ($\bar{p}_1(\tau) \to 1.0$). A candidate delay is rejected if it induces this linear collapse. The subset of valid delays $\mathcal{T}_{valid}$ is defined as:
+$$ \mathcal{T}_{valid} = \left\{ \tau \in \mathcal{T} \mid \bar{p}_1(\tau) \le 1 - \epsilon_{collapse} \right\} $$
+
+### Step 6: Spectral Gap Maximisation
+A valid embedding manifold partitions the local spectral energy into structural variance (along the $d$-dimensional tangent space) and uniform orthogonal noise (across the remaining $m-d$ ambient dimensions). The optimal parameters $(d^*, \tau^*)$ are those that maximise the discrete derivative (spectral gap) between the terminal tangent dimension and the primary noise dimension:
+$$ (d^*, \tau^*) = \underset{d \in \{1, \dots, m-1\}, \tau \in \mathcal{T}_{valid}}{\arg\max} \left( \bar{p}_d(\tau) - \bar{p}_{d+1}(\tau) \right) $$
+
+## Theoretical Resolution of the Rank-Locality Conflict
+In high-dimensional ambient spaces (e.g., $m=50$), forming a full-rank covariance matrix requires a neighbourhood size $k > 50$. For finite datasets ($N \approx 1000$), selecting $k \ge 50$ violates the geometric assumption of locality, as the neighbourhood encompasses macroscopic manifold curvature. This artificial curvature flattens the eigenvalue distribution and suppresses the spectral gap. 
+
+By compressing the ambient embedding dimension to a minimal mathematically valid bound (e.g., $m=10$), the algorithm permits a correspondingly small $k$ (e.g., $k=25$). This parameterisation satisfies the linear algebraic rank condition ($k > m$) whilst strictly enforcing topological locality ($k \ll N$), allowing the true local tangent space to be isolated from ambient orthogonal noise.
+
+# FFT Frequency-Bounded Delay Estimation
+
+## Overview
+The FFT Frequency-Bounded method determines the optimal embedding delay ($\tau$) by isolating the dominant periodic cycle of the time series in the frequency domain. It assigns $\tau$ as a fraction of this dominant period. A strict upper bound is applied to prevent receptive field explosion, ensuring the sliding window remains sensitive to high-frequency anomalies and preserves the local flatness required for differential geometry algorithms like Carré du Champ (CDC).
+
+## Mathematical Formulation
+
+Let $x_t$ for $t = 0, \dots, N-1$ be a discrete univariate time series. 
+
+**Step 1: Discrete Fourier Transform (DFT)**
+Transform the time series into the frequency domain to identify its underlying oscillatory components:
+$$ X(f_k) = \sum_{t=0}^{N-1} x_t e^{-i 2\pi k t / N} $$
+where $f_k = k/N$ represents the discrete frequencies for $k = 1, \dots, \lfloor N/2 \rfloor$ (excluding the DC component at $k=0$).
+
+**Step 2: Power Spectral Density (PSD)**
+Calculate the power spectrum to quantify the energy at each frequency bin:
+$$ P(f_k) = |X(f_k)|^2 $$
+
+**Step 3: Dominant Period Extraction**
+Identify the dominant frequency $f_{dom}$ that carries the maximum spectral energy, and compute its corresponding temporal period $T_{dom}$ (measured in time steps):
+$$ f_{dom} = \underset{f_k > 0}{\arg\max} P(f_k) $$
+$$ T_{dom} = \frac{1}{f_{dom}} $$
+
+**Step 4: Bounded Delay Calculation**
+Calculate the optimal delay $\tau^*$ as a specific fraction $\alpha$ of the dominant period, subject to a hard cap $\tau_{\max}$. 
+$$ \tau^* = \min \left( \lfloor \alpha T_{dom} \rceil, \tau_{\max} \right) $$
+
+where:
+*   $\alpha$: The phase-shift multiplier. Setting $\alpha = 0.25$ provides a quarter-wavelength shift, which is mathematically optimal for unfolding simple harmonic oscillators into circular phase-space trajectories (phase quadrature). Setting $\alpha = 0.1$ provides a tighter delay, maintaining closer spatial proximity for non-linear systems.
+*   $\lfloor \cdot \rceil$: Denotes rounding to the nearest integer.
+*   $\tau_{\max}$: The maximum allowable delay (e.g., $\tau_{\max} = 3$).
+
+## Theoretical Justification
+Information-theoretic delay estimators, such as Average Mutual Information (AMI), search for the global minimum of statistical dependence. For highly periodic or complex signals, AMI often selects excessively large delays ($\tau \ge 15$). 
+
+An excessively large $\tau$ triggers three mathematical failures in geometric anomaly detection:
+1.  **Receptive Field Explosion:** The sliding window spans multiple distinct statistical regimes, violating the assumption that the data can be approximated by a single, locally flat tangent space.
+2.  **High-Frequency Aliasing:** The window skips interstitial data points, rendering the network blind to transient spikes and rapid structural breaks.
+3.  **Curse of Dimensionality:** Expanding the trajectory stretches the Euclidean distances between nearest neighbours, destroying the compact topological structure required to compute a valid local covariance matrix.
+
+The FFT Frequency-Bounded method resolves this by explicitly tethering the delay to the physical oscillatory dynamics of the signal. By locking $\tau$ to a fraction of the primary cycle and enforcing $\tau_{\max}$, the method guarantees that the phase space is unfolded sufficiently to avoid diagonal collapse, whilst strictly preserving the high-frequency temporal correlation necessary for accurate tangent space projection.
+
+---
 
 ## 📊 Results & Insights
 # Grid Search Results Analysis
