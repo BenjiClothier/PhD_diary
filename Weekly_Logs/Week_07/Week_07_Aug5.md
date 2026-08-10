@@ -197,6 +197,155 @@ python experiments/neural_cdc/train_neural_cdc.py --dataset path/to/dataset.csv 
 * `--hidden_dim`: The width of the FiLM-conditioned ResBlocks.
 
 
+# Methods for Estimating Intrinsic Dimensionality
+
+## 1. False Nearest Neighbours (FNN)
+Evaluates the optimal embedding dimension for phase space reconstruction. It compares the Euclidean distance between nearest neighbours in dimension $m$ with their distance in dimension $m+1$. If the proportional distance increases beyond a defined threshold ($R_{tol} = 15.0$) or the absolute distance exceeds the dataset radius threshold ($A_{tol} = 2.0$), the neighbours are classified as 'false' artefacts of projection from a higher-dimensional space. The intrinsic dimension is identified as the lowest dimension $m$ where the fraction of false nearest neighbours falls below 0.05. The time delay parameter $\tau$ required for embedding is computed using two independent approaches:
+* **Autocorrelation Function (ACF):** Selects $\tau$ as the first temporal lag where the autocorrelation drops below $1/e$ or crosses zero.
+* **Average Mutual Information (AMI):** Selects $\tau$ as the first local minimum of the mutual information between the time series and its delayed counterpart.
+
+**Autocorrelation Function (ACF)**
+The Autocorrelation Function measures the linear correlation between a discrete time series $x_t$ and a lagged version of itself as a function of the time delay ($\tau$). For a stationary time series with mean $\mu$ and variance $\sigma^2$, the empirical ACF at lag $\tau$ is:
+
+$R(\tau) = \frac{1}{(N-\tau)\sigma^2} \sum_{t=1}^{N-\tau} (x_t - \mu)(x_{t+\tau} - \mu)$
+
+In the context of phase space reconstruction, ACF determines the embedding delay parameter. If $\tau$ is too small, consecutive coordinates are highly correlated, compressing the reconstructed attractor along a diagonal axis. If $\tau$ is too large, the coordinates become dynamically disconnected. The optimal delay is standardly selected as the first discrete lag $\tau$ where the absolute value of $R(\tau)$ decays below $1/e \approx 0.368$ or crosses zero. This threshold indicates that the linear correlation has dissipated sufficiently to yield independent coordinate axes. The primary mathematical limitation of ACF is its restriction to capturing purely linear dependencies.
+
+**Average Mutual Information (AMI)**
+Average Mutual Information evaluates the total statistical dependence between a time series and its delayed counterpart, capturing both linear and non-linear dynamics. Rooted in Shannon information theory, AMI quantifies the reduction in uncertainty about the future state $x_{t+\tau}$ given the knowledge of the current state $x_t$. It is defined using the marginal probability distributions $P(x_t)$ and $P(x_{t+\tau})$, alongside the joint probability distribution $P(x_t, x_{t+\tau})$:
+
+$I(\tau) = \sum_{x_t} \sum_{x_{t+\tau}} P(x_t, x_{t+\tau}) \log_2 \left( \frac{P(x_t, x_{t+\tau})}{P(x_t)P(x_{t+\tau})} \right)$
+
+Empirically, these probability distributions are estimated by partitioning the state space into bins and computing a 2D histogram of the paired coordinates $(x_t, x_{t+\tau})$. For delay embedding, the optimal delay $\tau$ is established at the first local minimum of the AMI curve. This minimum represents the temporal lag where the delayed coordinate adds maximal new information about the system without becoming entirely statistically independent. It serves as the standard non-linear generalisation of the ACF decorrelation metric.
+
+## 2. Levina-Bickel Maximum Likelihood Estimation (MLE)
+Estimates the intrinsic dimensionality by modelling the local spatial distribution of $k$-nearest neighbours as a Poisson process. For a sampled reference point, the local dimension is calculated from the logarithmic ratio of the distance to the $k$-th neighbour versus the distances to all closer neighbours ($j < k$). The global intrinsic dimension is the mean of these local estimates computed over a range of neighbour counts ($k \in [10, 20]$).
+
+**Levina-Bickel Maximum Likelihood Estimation (MLE)**
+
+Let $X = \{x_1, \dots, x_N\}$ be a dataset, and let $T_j(x_i)$ denote the Euclidean distance from a reference point $x_i$ to its $j$-th nearest neighbour.
+
+The local intrinsic dimensionality estimator at point $x_i$, based on its $k$ nearest neighbours, is derived from the Poisson process rate and is defined as:
+
+$$ \hat{m}_k(x_i) = \left[ \frac{1}{k-1} \sum_{j=1}^{k-1} \ln \left( \frac{T_k(x_i)}{T_j(x_i)} \right) \right]^{-1} $$
+
+The global intrinsic dimensionality estimator for a fixed $k$ is the arithmetic mean of the local estimators across all $N$ data points:
+
+$$ \hat{m}_k = \frac{1}{N} \sum_{i=1}^N \hat{m}_k(x_i) $$
+
+To reduce variance, the global estimate is typically averaged over a predetermined range of neighbour counts $k \in [k_1, k_2]$:
+
+$$ \hat{m}_{k_1, k_2} = \frac{1}{N} \sum_{i=1}^N \left( \frac{1}{k_2 - k_1 + 1} \sum_{k=k_1}^{k_2} \hat{m}_k(x_i) \right) $$
+
+## 3. Grassberger-Procaccia Correlation Dimension
+Computes the fractal dimension of the data manifold. It calculates the correlation integral $C(r)$, which is the fraction of point pairs separated by a Euclidean distance strictly less than $r$. Evaluated across a logarithmic scale of radii, the intrinsic dimension is extracted as the maximum slope of the smoothed local derivatives in the log-log plot of $C(r)$ versus $r$.
+
+**Grassberger-Procaccia Correlation Dimension**
+
+Let $X = \{x_1, \dots, x_N\}$ be a dataset of $N$ points. The correlation integral $C(r)$ measures the proportion of point pairs separated by a Euclidean distance strictly less than a radius $r$. It is defined as:
+
+$$
+C(r) = \lim_{N \to \infty} \frac{2}{N(N-1)} \sum_{i=1}^{N} \sum_{j=i+1}^{N} \Theta(r - \|x_i - x_j\|)
+$$
+
+where:
+* $\frac{2}{N(N-1)}$ is the normalisation factor representing the total number of distinct point pairs.
+* $\|x_i - x_j\|$ is the Euclidean distance between points $x_i$ and $x_j$.
+* $\Theta(\cdot)$ is the Heaviside step function, which outputs $1$ if the argument is strictly positive (i.e., $\|x_i - x_j\| < r$), and $0$ otherwise.
+
+For a fractal dataset or manifold, the correlation integral scales according to a power law for small values of $r$:
+
+$$
+C(r) \propto r^d
+$$
+
+The Grassberger-Procaccia correlation dimension $d$ is defined as the asymptotic limit of the slope of the log-log plot of $C(r)$ versus $r$:
+
+$$
+d = \lim_{r \to 0} \frac{\log C(r)}{\log r}
+$$
+
+In empirical estimation with finite data, $d$ is extracted by identifying the linear scaling region in the log-log plot and computing the gradient:
+
+$$
+\hat{d} = \frac{\Delta \log C(r)}{\Delta \log r}
+$$
+
+## 4. Singular Spectrum Analysis (SSA) Effective Rank via Shannon Entropy
+Quantifies the effective rank of the trajectory matrix generated from sliding windows. Singular Value Decomposition (SVD) is applied to the mean-centred data windows. The squared singular values are normalised to form a probability distribution $p$. The intrinsic dimension is computed as the exponential of the Shannon entropy of this eigenvalue distribution: $\exp(-\sum p \log p)$.
+
+**Singular Spectrum Analysis (SSA) Effective Rank via Shannon Entropy**
+
+Let $x = (x_1, \dots, x_N)$ be a univariate time series. A sliding window of length $w$ constructs a trajectory matrix $Y \in \mathbb{R}^{K \times w}$, where $K = N - w + 1$, and each row represents a continuous segment of the time series. Let $\tilde{Y}$ denote the mean-centred trajectory matrix.
+
+Singular Value Decomposition (SVD) applied to $\tilde{Y}$ yields a set of singular values $\sigma_i$. The variance captured by each principal component corresponds to the eigenvalues $\lambda_i$ of the covariance matrix $\tilde{Y}^T \tilde{Y}$:
+
+$$
+\lambda_i = \sigma_i^2
+$$
+
+These eigenvalues are normalised to construct a discrete probability distribution $p_i$, representing the fractional variance contribution of each component:
+
+$$
+p_i = \frac{\lambda_i}{\sum_{j=1}^w \lambda_j}
+$$
+
+The Shannon entropy $H$ of this distribution quantifies the flatness or dispersion of the energy across the singular spectrum:
+
+$$
+H = -\sum_{i=1}^w p_i \ln p_i
+$$
+
+The effective rank, which acts as a continuous estimator for the intrinsic dimensionality of the dynamical system, is calculated as the exponential of the Shannon entropy:
+
+$$
+d = \exp(H)
+$$
+
+## 5. Principal Component Analysis (PCA) Heuristics
+Extracts eigenvalues (squared singular values) from the SVD of the sliding window trajectory matrix. These values represent the variance along orthogonal principal components. Four distinct heuristics derive a discrete intrinsic dimension from this spectrum:
+* **95% Cumulative Variance:** The minimum number of principal components required to account for 95% of the total variance.
+* **99% Cumulative Variance:** The minimum number of principal components required to account for 99% of the total variance.
+* **Kaiser Rule:** The absolute count of eigenvalues strictly greater than the mean eigenvalue.
+* **Eigengap:** The index corresponding to the maximum absolute difference between consecutive sorted eigenvalues.
+
+## 6. Spectral Decay (Log-Log Power Spectrum Slope)
+Measures the power-law scaling behaviour of the time series in the frequency domain. A Fast Fourier Transform (FFT) generates the power spectrum. A linear regression applied to the log-10 frequencies versus log-10 power values yields the spectral slope $\beta$.
+
+**Spectral Decay (Log-Log Power Spectrum Slope)**
+
+Let $x_t$ for $t = 0, \dots, N-1$ be a discrete time series. The frequency-domain representation is computed via the Discrete Fourier Transform (DFT):
+
+$$
+X(f_k) = \sum_{t=0}^{N-1} x_t e^{-i 2\pi k t / N}
+$$
+
+where $f_k = k/N$ are the discrete frequencies for $k = 1, \dots, \lfloor N/2 \rfloor$ (excluding the DC component at $k=0$).
+
+The power spectrum $P(f_k)$ quantifies the energy distribution of the signal across these frequencies:
+
+$$
+P(f_k) = |X(f_k)|^2
+$$
+
+For scale-invariant or fractal time series, the power spectrum follows a power-law relationship:
+
+$$
+P(f) \propto f^\beta
+$$
+
+Applying a base-10 logarithm transforms this scaling equation into a linear function, where $\beta$ is the spectral decay gradient and $C$ is a constant intercept:
+
+$$
+\log_{10} P(f_k) = \beta \log_{10} f_k + C
+$$
+
+The scaling exponent $\beta$ characterises the temporal correlation and intrinsic roughness of the signal. Empirically, $\beta$ is extracted via ordinary least squares linear regression over the strictly positive frequencies:
+
+$$
+\hat{\beta} = \frac{\sum \left( \log_{10} f_k - \overline{\log_{10} f} \right) \left( \log_{10} P(f_k) - \overline{\log_{10} P} \right)}{\sum \left( \log_{10} f_k - \overline{\log_{10} f} \right)^2}
+$$
+
 ---
 
 
