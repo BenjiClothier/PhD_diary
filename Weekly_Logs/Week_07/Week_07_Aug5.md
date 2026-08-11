@@ -438,8 +438,101 @@ The FFT Frequency-Bounded method resolves this by explicitly tethering the delay
 
 ---
 
-## 📊 Results & Insights
-# Grid Search Results Analysis
+
+# Neural Continuous Diffusion Convolution (Neural CDC)
+
+This directory contains the implementation of **Neural CDC**, an advanced deep learning framework designed to learn the continuous Riemannian geometry of time-series data without relying on discrete $k$-NN graphs or explicit eigendecompositions.
+
+## 1. Core Concept
+In standard CDC, we construct a discrete nearest-neighbor graph, compute the Graph Laplacian, and perform an eigendecomposition to find the local tangent space of the data manifold. 
+**Neural CDC** bypasses this discrete approximation entirely. It learns the topological structure of the data manifold directly through a continuous score-matching objective. 
+
+Instead of an explicit graph, a neural network learns a low-rank Riemannian Metric tensor $\Gamma(x)$ that defines the tangent space at any point $x$ in the continuous space.
+
+## 2. Architecture (`networks.py`)
+
+### `MetricMatchingMLP`
+The core neural architecture is a **FiLM-conditioned Residual MLP**.
+* **Inputs**: 
+  * $x_t = [x_t, x_{t-\tau}, \dots, x_{t-(D-1)\tau}]$: A strict delay-embedded phase space vector where $\tau$ is the topological delay (to prevent temporal collapse).
+  * $\epsilon \in \mathbb{R}$: A continuous scalar representing the noise scale (diffusion time).
+* **Outputs**:
+  * $M \in \mathbb{R}^{r \times D}$: A low-rank projection matrix, where $r$ is the target rank. According to the Whitney Embedding Theorem, to guarantee a valid low-rank factorisation without topological singularities for an intrinsic dimension $d$, the rank must satisfy $r \ge 2d - 1$.
+  * The full Riemannian metric is defined implicitly as $\Gamma = M^T M$.
+* **Conditioning via FiLM**:
+  * The noise scale $\epsilon$ is mapped to a high-dimensional space using **Fourier Features** (similar to positional encoding in transformers).
+  * This Fourier embedding is passed into Feature-wise Linear Modulation (**FiLM**) layers.
+  * The FiLM layers dynamically shift and scale the activations inside the Residual Blocks based on the current noise level $\epsilon$.
+
+## 3. The Continuous Training Objective (`train_neural_cdc.py`)
+
+Neural CDC is trained using a generalized Score Matching objective (specifically, a Conditional Metric Matching loss). 
+The network learns the geometry by observing how the data density changes when smoothed by Gaussian noise.
+
+1. **Noise Injection**: We sample a log-normal noise scale $\epsilon$ (using the Karras 2022 sampling strategy) and inject it into the raw data $X$: 
+   $$Y = X + \sqrt{\epsilon} \cdot Z$$
+2. **Metric Prediction**: The network predicts the projection matrix $M$ based on the noisy data $Y$.
+3. **Loss Function**: We minimize the Conditional Metric Matching Loss with Tikhonov Regularisation:
+   $$ \mathcal{L} = \mathbb{E} \left[ ||M_Y M_Y^T||_F^2 + 2\lambda ||M_Y||_F^2 - \frac{1}{\epsilon} ||M_Y (X - Y)||^2 \right] $$
+   * This is mathematically equivalent to regressing the Hessian of the smoothed data density. 
+   * The Tikhonov regularisation penalty $\lambda$ ensures strict positive definiteness and prevents the matrix from fitting to orthogonal ambient noise.
+   * By forcing the network to output a rank-$r$ matrix $M$, we force it to discover the optimal tangent plane that best explains the local density.
+
+## 4. Anomaly Scoring (The Orthogonal Error)
+
+Once the network is trained, it has successfully learned the tangent space projection matrix $M$ for any healthy data point. We use this to detect anomalies via Structural Drift.
+
+For an incoming transition from time $t-1$ to $t$:
+1. **Manifold Denoising (Anchor Construction)**: To prevent orthogonal anomalies from contaminating the geometric reference, we rigorously denoise the anchor point using the valid geometry at $t-2$:
+   $$X_{anchor} = X_{t-2} + M(X_{t-2})^T M(X_{t-2})(X_{t-1} - X_{t-2})$$
+2. **Tangent Space Query**: Query the network for the healthy tangent space at $X_{anchor}$ (evaluated at a small noise scale, e.g., $\epsilon=0.01$) to extract $M$.
+3. **Idempotent SVD Projection**: To strictly enforce true orthogonal idempotency ($(M^T M)^2 = M^T M$), $M$ undergoes an exact Singular Value Decomposition $U, S, V = \text{SVD}(M)$.
+4. **Anomaly Scoring**: Project the physical movement $\Delta X = X_t - X_{t-1}$ using the exact projector $\Delta \hat{X} = V^T (V \Delta X)$. The final score is the Orthogonal Error:
+   $$ Score = ||\Delta X - \Delta \hat{X}||^2 $$
+
+### Alternative Metrics
+
+**Metric 1: Relative Orthogonal Error**
+*   **Concept:** Measures the spatial deviation of a physical transition strictly perpendicular to the learned data manifold.
+*   **Mathematical Definition:** $S_{ortho} = \frac{\|\Delta X - P_T \Delta X\|_2^2}{\|\Delta X\|_2^2} = \sin^2(\theta)$.
+*   **Reasoning:** A valid dynamical system operates entirely within its low-dimensional tangent space $\mathcal{T}_p\mathcal{M}$. If an anomaly occurs, the state vector violates the governing differential equations, forcing the trajectory off the manifold into the ambient orthogonal space. The absolute orthogonal error ($\|\Delta X^\perp\|_2^2$) is susceptible to velocity bias; high-speed transitions inherently amplify background ambient noise, scaling the error even on valid trajectories. Normalising by the squared transition length ($\|\Delta X\|_2^2$) isolates the geometric angle of departure ($\theta$). This renders the score strictly velocity-invariant, identifying structural drift irrespective of the system's traversal speed.
+
+**Metric 2: Riemannian Transition Distance**
+*   **Concept:** Evaluates the squared length of the transition projected through the learned metric tensor.
+*   **Mathematical Definition:** $S_{riem} = \|M(X_{t-1}) \Delta X\|_2^2 \approx \frac{1}{2} \Delta X^T P_T \Delta X = \frac{1}{2} \|\Delta X^\parallel\|_2^2$.
+*   **Reasoning:** The neural surrogate $M^T M$ converges to the tangent space projector $P_T$ in the low-noise limit. Consequently, multiplying the transition vector $\Delta X$ by $M$ extracts the parallel (tangent) component of the movement. For anomaly detection, this metric is mathematically inverted. A healthy system moving rapidly along its manifold will produce a massive $S_{riem}$ score. A structural anomaly drifting strictly orthogonally to the manifold will yield a zero tangent projection ($S_{riem} \approx 0$). It measures adherence to the manifold rather than departure from it.
+
+**Metric 3: Tangent Space Drift**
+*   **Concept:** Quantifies the rotational and structural distortion of the local tangent bundle between consecutive time steps.
+*   **Mathematical Definition:** $S_{drift} = \|M(X_t)^T M(X_t) - M(X_{t-1})^T M(X_{t-1})\|_F^2$.
+*   **Reasoning:** On a smooth manifold, the tangent space $P_T$ evolves continuously. If the system undergoes a sudden regime shift or structural break (e.g. transitioning from a limit cycle to a chaotic attractor), the local geometry instantly reorganises. The Frobenius distance between the metric tensors captures this immediate geometric shift. It is effective for contextual anomalies but computationally insensitive to isolated point anomalies that temporarily move off-manifold without redefining the local curvature.
+
+**Metric 4: Pointwise Topographic Reconstruction Loss**
+*   **Concept:** Evaluates the conditional metric matching loss at inference time by injecting a single realisation of noise.
+*   **Mathematical Definition:** $S_{recon} = \|M_Y M_Y^T\|_F^2 - \frac{1}{\epsilon}\|M_Y(X_t - Y_t)\|_2^2$, where $Y_t = X_t + \sqrt{\epsilon}Z$.
+*   **Reasoning:** The conditional metric matching loss is a stochastic estimator of the deterministic Carré du Champ operator. At convergence, $M^T M \approx \frac{1}{2} P_T$. Substituting this into the loss function under the limit of a single inference-time noise sample $Z$ yields $\text{Tr}(\frac{1}{4}P_T) - \frac{1}{2} Z^T P_T Z \approx \frac{r}{4} - \frac{r}{2} = -\frac{r}{4}$. The resulting scalar is dominated by the static rank $r$ of the projection matrix and the variance of the injected noise $Z$. It contains negligible structural information regarding the coordinate $X_t$, rendering it mathematically unsuitable as an anomaly score.
+
+**Metric 5: Spectral Entropy Collapse**
+*   **Concept:** Measures shifts in the intrinsic dimensionality of the local phase space via the Shannon entropy of the metric tensor's eigenvalues.
+*   **Mathematical Definition:** $S_{entropy} = |H(X_t) - H(X_{t-1})|$, where $H(X) = -\sum p_i \ln p_i$ and $p_i = \sigma_i^2 / \sum_{j=1}^r \sigma_j^2$.
+*   **Reasoning:** Healthy dynamical systems operate on manifolds of fixed intrinsic dimension $d$. The local covariance spectrum is highly concentrated in the top $d$ eigenvalues, yielding a low spectral entropy. When subjected to an anomaly, the system typically decouples into uncorrelated stochastic noise. This expands the variance across the entire $r$-dimensional ambient subspace, flattening the eigenvalue distribution and driving the spectral entropy toward $\ln(r)$. The absolute difference in entropy isolates catastrophic losses of topological determinism.
+
+## 5. Usage
+
+To train and evaluate Neural CDC on a specific dataset:
+```bash
+python experiments/neural_cdc/train_neural_cdc.py --dataset path/to/dataset.csv --r 5 --epochs 3000
+```
+* `--r`: The rank of the projection matrix (the intrinsic dimension).
+* `--eps_max`: The maximum noise scale used during Karras sampling.
+* `--hidden_dim`: The width of the FiLM-conditioned ResBlocks.
+
+
+---
+
+
+# 📊 Results & Insights
+## Grid Search Results Analysis
 
 Here is the detailed breakdown of the hyperparameter sweep over different intrinsic dimension estimators and $\tau$ values (with locked 3-layer architecture `L3` to ensure a fair comparison).
 
