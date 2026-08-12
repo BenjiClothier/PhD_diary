@@ -3,6 +3,8 @@
 ## 🎯 Focus of the Week
 >MAKE SLIDES
 
+[Taken's Delay](https://colab.research.google.com/drive/1h4oTvDnL315lzbalsW4m6epH1UQ3JM1i#scrollTo=V8WPaeIqPtfW)
+
 ---
 
 ## 📝 To-Do List
