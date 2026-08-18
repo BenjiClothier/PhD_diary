@@ -3,6 +3,7 @@
 ## 🎯 Focus of the Week
 Simplify the hyperparameters of CDC-FM AD from dimension and tau to L (the receptive field). Begin taking notes on tools provided by Diffusion Geometry and their applications to Anomaly Detection.
 
+https://colab.research.google.com/drive/1h4oTvDnL315lzbalsW4m6epH1UQ3JM1i?usp=sharing
 ---
 
 ## 📝 To-Do List
