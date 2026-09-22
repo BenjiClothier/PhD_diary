@@ -33,7 +33,11 @@ attempts (Week_11) towards something simple enough to fully verify end to end.
 - [x] Write the full paper draft set: Introduction, Background, Method,
   Results, Discussion, Abstract, Conclusion.
 - [x] Build talk materials: a flow diagram of the full `(L,d)` pipeline plus
-  two slide decks (a sparse talk deck and a full-derivation companion deck).
+  two slide decks (a sparse talk deck and a full-derivation companion deck)
+  — [Slides/](Slides/): [presentation.pdf](Slides/presentation.pdf) (talk),
+  [companion.pdf](Slides/companion.pdf) (full derivations + intuition,
+  not for the audience), [ld_estimation_flow.pdf](Slides/ld_estimation_flow.pdf)
+  (the standalone pipeline diagram both decks embed).
 - [x] Initial scaffolding for the Week 13 pivot (see Next Steps) started.
 
 ---
