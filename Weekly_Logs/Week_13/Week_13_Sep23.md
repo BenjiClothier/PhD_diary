@@ -42,6 +42,8 @@ reference figures, not reproduced here.
 - [x] Supervisor slides: [Slides/presentation.pdf](Slides/presentation.pdf)
   (18 slides; full protocol detail and citations in the speaker notes —
   uncomment `show notes on second screen` in the `.tex` to see them).
+- [x] Training-only rerun of the ensemble on Tuning and Eva (the
+  test-period-scaling caveat; see Results).
 - [ ] Blind re-validation of the ensemble (see Results caveats).
 - [ ] Cap-free CDC reruns on GPU.
 
@@ -113,6 +115,8 @@ found and fixed during smoke tests before any grid was trusted
 windows).
 - Tuning-48: 0.5329 vs. global 0.5295 (p = 0.93) — no regression — while
   recovering 26/27 OPPORTUNITY wins (0.7301).
+- Training-only version of the same ensemble (see Results): Tuning-48
+  0.5177 (p = 0.64 vs. global).
 - One variant tried and rejected on its own pre-stated criterion: a
   per-query local-subspace scorer, which failed the case it was built
   for and was 15–20× slower.
@@ -152,37 +156,37 @@ windows).
 
 **Headline result** (Hankel_AD ensemble, official Eva split, 350/350
 datasets evaluated, `(L, d)` from `v4_3`,
-`utils/ensemble_scorer_grid.py --split eva`):
+`utils/ensemble_scorer_grid.py --split eva`, with and without
+`--norm train_theiler`):
 
-| | mean VUS-PR | median VUS-PR |
-| :--- | :---: | :---: |
-| Global (`v4_3`) | 0.5671 | 0.6647 |
-| Local (1-NN distance) | 0.5447 | 0.5854 |
-| **Ensemble** | **0.6266** | **0.7159** |
-| TimeRCD-MAFT (reference figure) | 0.5856 | 0.6511 |
+| | mean VUS-PR | median VUS-PR | vs. global |
+| :--- | :---: | :---: | :--- |
+| Global (`v4_3`) | 0.5673 | 0.6647 | — |
+| Ensemble, z-scale set with test-period scores | 0.6266 | 0.7159 | +0.060, Wilcoxon p = 5.4×10⁻⁵ |
+| **Ensemble, training data only** | **0.5719** | **0.6469** | **+0.005, p = 0.18 (n.s.)** |
+| TimeRCD-MAFT (reference figure) | 0.5856 | 0.6511 | — |
 
-Ensemble vs. global: 138 wins, 74 losses, 138 ties; Wilcoxon
-p = 5.4×10⁻⁵.
+**The first ensemble's gain depended on test-period scaling.** Its
+robust z-scores were centred on the training median but scaled by the
+MAD of *all* windows, train and test. No labels are used (not label
+leakage), but it is transductive: the unlabelled test-period score
+distribution set the relative weight of the two scorers inside
+`max()`. Setting that scale from training data alone (and fixing the
+self-match bug that had made a training-only MAD collapse — every
+training window's local score was exactly 0) removes ~92% of the gain,
+which is no longer significant. This was the pre-stated test of the
+caveat, and it failed.
 
-**Caveats that must go with that number:**
+**What survives:** the OPPORTUNITY fix needs no test data (27 datasets:
+0.080 → 0.685 training-only). **What doesn't:** on the other 323 datasets
+the training-only ensemble is 0.046 below global on mean (97 wins, 98
+losses, p = 0.46) — a few large losses cancel the OPPORTUNITY gain.
+
+**Other caveats that still apply:**
 - **Not a blind test.** The OPPORTUNITY family used to build and validate
   the ensemble is inside the Eva split.
-- **Most of the gain is that family.** Excluding it (323 datasets):
-  +0.0100 mean, Wilcoxon p = 0.051 — borderline.
 - **Not an apples-to-apples SOTA comparison.** TimeRCD-MAFT is a
   leaderboard figure, not rerun here.
-- **The z-score scale uses unlabelled test-period scores.** The MAD is
-  taken over all windows, train and test. No labels are used, so this is
-  not label leakage, but it is transductive: the test period's unlabelled
-  score distribution sets the relative weight of the two scorers. Found
-  30 Sept that the underlying reason a training-only MAD failed was a
-  self-match (every training window's local score is exactly 0), not
-  near-duplicate windows as first logged. A training-only rerun is in
-  progress; on the one dataset checked so far (`560_YAHOO_id_10`) it
-  brings back the original failure (ensemble 1.000 → 0.006), so the
-  aggregate gain may partly depend on the transductive step.
-- 7 Tuning datasets still lose badly; the mechanism is understood
-  (`max()` cannot suppress one scorer's false positives) but not fixed.
 - 4 OPPORTUNITY datasets stay catastrophic under every local method.
 
 **Insights:**
@@ -199,10 +203,11 @@ p = 5.4×10⁻⁵.
 ---
 
 ## ⏭️ Next Steps
-- Blind re-validation of the ensemble, keeping OPPORTUNITY out of both
-  building and evaluation.
-- Decide whether a guarded combination rule for the 7 failure cases is
-  worth the added complexity.
+- Find a way to combine the local and global scorers that sets their
+  relative weights from training data alone and does not harm the
+  datasets where global already works.
+- Then a blind re-validation, keeping OPPORTUNITY out of both building
+  and evaluation.
 - Finish the citation clean-up in the Hankel_AD docs.
 - Hankel_CDC_AD: cap-free GPU reruns before its Tuning aggregates are
   quoted anywhere.
