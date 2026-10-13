@@ -274,10 +274,23 @@ orthogonal part.
   stretches, calibrated on healthy windows, and give the score to the
   stretch that stands out. Removes the long-window loss on short synthetic
   anomalies (local detector 0.91–0.96 at every window length vs. 0.33
-  whole-window at the longest); costs on Lorenz. Tuning-48 run in progress.
+  whole-window at the longest); costs on Lorenz. On Tuning-48 the
+  localised version makes window length matter much less (0.49–0.53 from
+  one to four periods, where whole-window falls 0.52 → 0.38) but does not
+  beat the best whole-window score (0.533 vs 0.524). Clipping 2Γ's
+  eigenvalues fixes 429_UCR (0.11 → 0.64) but breaks 852_OPPORTUNITY
+  (0.99 → 0.07): eigenvalues above 1 carry the "between regimes" signal there.
 - **Nearest-point maps (6 Oct):** on 2-D shapes, an idempotent network
   built as the gradient of a scalar lands 2–5× closer to the true nearest
   point than the denoiser.
+
+**DG_AD evaluation run on Eva (7 Oct, one shot, protocol frozen in advance).**
+All 350 datasets, no failures. Learned scorer **0.5938 mean / 0.6611 median**,
+against the Hankel global detector 0.5729 / 0.6720 (+0.021 [−0.016, +0.057],
+Wilcoxon p = 0.011) and the local detector 0.5680 / 0.6240 (+0.026 [+0.005,
++0.047]). Leaderboard reference 0.5856 / 0.6511 (quoted, not rerun). Gains on
+multi-regime and curved families (OPPORTUNITY +0.33, MGAB +0.56, SVDB +0.20),
+losses on drift and short-prefix families (YAHOO −0.22, MSL −0.16, WSD −0.10).
 
 **Presentations and reports (7 Oct):** two-beliefs evidence report and
 deck, proofs deck, Whakaari "why it failed" deck
@@ -309,7 +322,7 @@ from scratch; Hankel's dimension values not used as evidence in DG_AD.
 ## ⏭️ Next Steps
 - **Decisions for the supervisor meeting:** what to do with the Hankel
   paper (as is, or a short benchmark-practice paper on evaluation
-  pitfalls); which method to freeze for the one-shot Eva test.
+  pitfalls); what to do with the DG_AD Eva result (0.594 mean).
 - Finish the Tuning-48 stretch scan, including the eigenvalue clipping.
 - A label-free, per-dataset choice of window length and noise level.
 - Drift: treat the constant direction as always tangent (560_YAHOO,
