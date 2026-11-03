@@ -289,6 +289,127 @@ member: our reimplementation of CHARM_kNN's statistics half, lengths 16–512). 
 views' method and results, and how our score joins as a 13th member. The full deck with the wavelet sections is kept
 as `Wavelet_AD/docs/presentations/weekly_2026-10-28_full.tex`.
 
+#### 28 Oct (afternoon): does time-series data lie on a manifold? Geometry checks for CDC
+
+**The supervisor's question.** Does time-series data lie on a manifold? "The sliding window causes a twisting that
+fills the space." This goes to the premise of DG_AD's CDC score. That score needs healthy windows to spread along a few
+(tangent) directions and be thin in the others, at the scale the method works.
+
+![The idea: nearest neighbour mixes the distance off the healthy set with the gap along it](geo_decomposition.png)
+
+**Theory, checked against the literature** (reviews in `Wavelet_AD/docs/papers/`):
+- **The twisting.** Sliding a window by one sample rotates it in every frequency plane at once (Idé 2006, Eqs. 15
+  and 19).
+- **What a covariance can see.** The covariance of sliding windows has Fourier eigenvectors and power-spectrum
+  eigenvalues whatever the data (Idé 2006, Eq. 16). So any covariance-based summary (global PCA, Hankel_AD's
+  subspace) sees only the spectrum.
+- **Linear against intrinsic dimension.** The twisting spreads windows over many *linear* directions without adding
+  *intrinsic* ones. Intrinsic dimensions come from randomness inside a window: noise and cycle-to-cycle variation.
+- **Keogh & Lin (2005).** Clustering sliding windows gives sine-wave centres for any data. Their "trivial matches"
+  (a window's best matches are its own shifted copies) are what our Theiler window removes.
+- **Correction.** I had credited Keogh & Lin with the shift-symmetry explanation; it is Idé's.
+
+**Dimension check** (training stretches only, no labels).
+- **Local dimension:** how many directions the healthy windows spread in around a given window. It is estimated from
+  distances to the nearest windows that do not overlap in time (Levina–Bickel).
+- **Reference:** the same values shuffled, which fill the space by construction.
+- **Known answers:** clean sine 1.0, clean two tones 2.0.
+
+| scale | median series | shuffled values |
+|---|---|---|
+| ~10 neighbours (where our methods work), window $L$ | 7.8 | 29 |
+| ~200 neighbours, windows 32 → 512 samples | about 4, flat (×0.93) | grows ×4.9 |
+
+- **At the larger scale the sliding window does not fill the space.** The windows lie near a set of about 4
+  dimensions that stops growing with window length.
+- **At the nearest-neighbour scale, noise dominates.** A sine with 5% noise variance reads 27 there.
+- **10 of 39 series read like their shuffled values** at window length $L$: the short-period and Stock series.
+- **No link** between a series' dimension and the projector's gain over nearest neighbour.
+
+![Local dimension against window length](geo_dimension.png)
+
+**g01: remove the phase with a Fourier transform** (owner's idea).
+- **Set-up.** Windows were replaced by their Fourier magnitudes, which removes the phase and keeps the norm.
+  DG_AD's score (closed form) and nearest neighbour were run on both representations.
+- **Bandwidth.** The kernel bandwidth was matched to raw's effective neighbours. Removing the phase shrinks
+  distances, which had made DG_AD's bandwidth average about 280 neighbours instead of about 11.
+
+| VUS-PR (Tuning) | raw windows | Fourier magnitudes |
+|---|---|---|
+| nearest neighbour | 0.505 | 0.486 |
+| DG_AD score | 0.514 | 0.494 |
+| score − nearest neighbour | +0.009 [−0.004, +0.022] | +0.008 [+0.002, +0.016] |
+
+- **The score's lead over nearest neighbour does not change** (difference −0.001 [−0.010, +0.009]). The phase was not
+  what limited the geometry.
+- **Both methods lose against raw windows** (nearest neighbour −0.019 [−0.035, −0.005]). The losses are mostly on
+  anomalies a fraction of a cycle long: magnitudes discard within-cycle timing and shape.
+- **Fourier windows are not cleaner locally** (12 directions against 8). On ECG they scramble the cycle: 429_UCR goes
+  from 5 to 44 directions, and nearest neighbour from 0.526 to 0.249.
+
+**g02: denoise before windowing.**
+- **Set-up.** The series is smoothed by a moving average of width $L/16$, $L/8$ (primary) or $L/4$ before DG_AD's
+  windows are taken. The comparison is the same as g01.
+
+| smoothing | nearest neighbour | DG_AD score | score − nearest neighbour | local dimension ($k=10$) |
+|---|---|---|---|---|
+| none | 0.505 | 0.514 | +0.009 [−0.004, +0.022] | 7.9 |
+| $L/16$ | 0.493 | 0.505 | +0.012 [+0.005, +0.021] | 5.4 |
+| $L/8$ | 0.474 | 0.482 | +0.008 [+0.003, +0.013] | 5.1 |
+| $L/4$ | 0.449 | 0.459 | +0.010 [+0.001, +0.019] | 5.0 |
+
+- **The geometry gets cleaner, but the lead does not grow.** Change against raw at $L/8$: −0.001 [−0.012, +0.010].
+- **Both methods lose more the more we smooth.** Within-cycle shape and texture are averaged away. On 429_UCR (ECG),
+  nearest neighbour falls from 0.526 to 0.137 at $L/8$.
+- **Two fixes failed in a row (phase removal, denoising), so the problem was restated.**
+  - CDC's tangent correction is worth about +0.01 over nearest neighbour whatever the representation.
+  - Theory (DG_AD 23 Oct): nearest neighbour misses the distance off the healthy set only by the gap to the nearest
+    healthy sample along the set. With many repeated cycles that gap is tiny, so nearest neighbour is already nearly
+    exact.
+  - Noise and phase don't change that sampling density.
+
+![DG_AD's lead over nearest neighbour under each representation](geo_robust.png)
+
+**$L$ audit** (owner: "have we over-assumed $L$?").
+- **How $L$ is chosen.** It is TSB-AD's automatic period guess: the highest autocorrelation peak at lags 3–400, with
+  125 as the fallback.
+- **It is a real period on only 24 of 48 Tuning series.** On 16 it is a fallback or a ripple on a slowly changing
+  series, so window lengths, smoothing widths and $a/L$ classes built on it are arbitrary there.
+- **Post hoc, by group.** DG_AD's small Tuning gain sits on the series without a period (+0.028). It is −0.003 on
+  clear-period series, driven by one ECG series. The groups also differ in anomaly length.
+
+![Prominence of the autocorrelation peak at L, per Tuning series](geo_l_audit.png)
+
+**g03: thinning the training set** (does geometry gain where samples are sparse?).
+- **Set-up.** Training windows were removed at random, keeping 1/4, 1/16 or 1/64 of them, and DG_AD's score was
+  compared with nearest neighbour at each level.
+- **With DG_AD's own bandwidth, the lead grows a little, then falls back.** It goes +0.009 (all), **+0.016
+  [+0.004, +0.030]** (1/4), **+0.020 [+0.001, +0.044]** (1/16), +0.010 (1/64). That is the shape theory predicts.
+  - The change against the full set is not yet resolved: +0.007 [−0.002, +0.019] at 1/4.
+- **The planned variant failed by design.** It held the number of neighbours averaged fixed, so at low density its
+  bandwidth hit the search limit on up to 12 of 19 series and stopped being local: −0.163 at 1/64.
+
+![Thinning](geo_thinning.png)
+
+**Supervisor's direction: stick with geometry.** I wrote a short document on what geometry offers over nearest
+neighbour in theory, and what our results already show, with diagrams:
+`Wavelet_AD/docs/the_case_for_geometric_anomaly_detection.md`; PDF copy in this folder.
+
+**$L$ sweep (l01).** Nearest neighbour was scored at every window length from 4 to 384 samples, per series, to find
+which length works best and to work back to a rule that doesn't need labels.
+- **Hindsight.** Choosing the best length per series would lift nearest neighbour from 0.505 (at $m=L$) to 0.682. This
+  is an upper bound: it picks the best of about 15 values.
+- **What sets the best length.** It follows the anomaly length (Spearman +0.64, about 1.2× the anomaly) much more than
+  the period (+0.20).
+- **A rule without labels.** The maximum over lengths 8–128 gives 0.558 (+0.053 [−0.039, +0.149]).
+  - On series without a real period: 0.613 against 0.470.
+  - On clear-period series, $L$ is still the best single choice.
+- **Geometry by window length.** The lead is +0.024 [+0.006, +0.049] at 64 samples; there is no gain at 128–256.
+
+![Choosing the window length](l01_rules.png)
+
+![Best window length against anomaly length](l01_oracle.png)
+
 ### NP_AD (21–22 Oct)
 - **Constrained objective ("idea 1") on toys:** large gains on noise-free and lightly noisy data, both on the set and
   inward; worse on and near the set at noise 0.05.
@@ -321,6 +442,16 @@ as `Wavelet_AD/docs/presentations/weekly_2026-10-28_full.tex`.
   - the deep approximation: a heavily smoothed, down-sampled window, for anomalies over 256 samples.
 
   For long anomalies a simpler window-statistics member does better.
+- **Geometry, 28 Oct.**
+  - At the scale our methods work, healthy windows are noise-dominated. The low-dimensional structure (about 4
+    dimensions) shows only at coarse scales, and mainly on series with a real period.
+  - Neither removing the phase nor denoising widened CDC's lead over nearest neighbour (about +0.01 every time), and
+    both cost accuracy.
+  - The likely reason is that many repeated cycles make nearest neighbour nearly exact.
+  - $L$, our period estimate, is a real period on only half the Tuning series.
+  - Thinning the training set (g03): with DG_AD's own bandwidth the lead grows a little as samples thin (+0.016 at
+    1/4, +0.020 at 1/16), as theory predicts. The change is not yet resolved. Positive case written up:
+    `the_case_for_geometric_anomaly_detection.pdf` (this folder).
 - **Best number this week, Tuning only:** 12 views + window statistics (+ wavelet details) = 0.673–0.675. Not run on
   Eva.
 - **Process:**
@@ -346,6 +477,16 @@ as `Wavelet_AD/docs/presentations/weekly_2026-10-28_full.tex`.
      (the fixed mean is what buries informative levels and members), rather than learned features per series, which
      lost to nearest neighbour every time this week.
   4. **When to spend the third Eva look,** on a frozen ensemble.
+  5. **The CDC route on univariate windows.** On raw, phase-free and denoised windows alike, CDC is a correction of
+     about +0.01 over nearest neighbour on Tuning (+0.02 on Eva, raw). One test is left that could change this: thin
+     the training set and see whether the lead grows as the healthy set gets sparser.
+     - If it grows, CDC's niche is short training histories.
+     - If it doesn't, set the route aside for univariate windows.
+  6. **$L$.**
+     - Report results by period group and by $a$ in samples.
+     - Fix the DG_AD paper's "our $L$ is the period".
+     - The sweep suggests a rule to test: $L$ where the period is clear, a maximum over window lengths elsewhere. It
+       would give about 0.561 on Tuning, but it was designed after seeing the groups, so it needs a fresh test.
 - **Unexplained, worth a look before modelling:** the 10 Tuning series with 4–32-sample anomalies, which nothing of
   ours handles well (best 0.569).
 - **Paper (DG_AD):** reframe around what holds. The closed-form/learned projector gives a small, consistent gain over
