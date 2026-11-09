@@ -42,7 +42,8 @@ requests recorded in the project logs.
 - [~] **Supervisor: make the learned CDC work.**
   - Synthetic: done. With a 1-D CNN, RMM finds the true dimension and tangent space (section 1).
   - Real series (s12 Part B, 3 Nov): the plane is barely learned, median one direction (section 0.1).
-  - Running now: the geometry learned separately at each scale (s17, section 0.7).
+  - The geometry learned separately at each layer (s17, 4 Nov): the planes are still thin, but per-layer tangent
+    scores help long anomalies and short spikes (section 0.7).
 - [~] **Owner: do anomalies of different lengths show up in the expected "layers"?**
   - Synthetic: yes (s10, s10b; section 4).
   - Tuning (s16, 4 Nov): long anomalies need a long reach, and spikes show at every reach; but there is no clean
@@ -260,13 +261,26 @@ shuffled values.*
 
 #### 0.7 Running now, and other work
 
-- **Running (s17):** the tangent plane learned separately at each layer, using each layer's denoiser as RMM's
-  reference, with every tangent score per layer. Also running: three tangent uses not tried before:
-  - a distance that weights along-the-set and across-the-set deviations separately;
-  - the angle between a window's plane and the plane one period earlier;
-  - the off-tangent residual at the window's centre sample.
-
-  6 GPUs; results not yet in.
+- **Finished on 4 Nov (s17, s17a): the tangent plane learned at each layer.** Each layer's denoiser serves as RMM's
+  reference, so every tangent score is computed per layer. Run on 6 GPUs, a median of 7 minutes per series.
+  - **Known answers:** each metric head depends only on its own reach. The sine's one direction is found from the
+    17-sample layer up, but not at 5 and 9 samples (untested reason: the read-out noise is close to the sine's
+    amplitude).
+  - **Where it helps** (per anomaly, one layer minus the same score on the whole window):
+    - long anomalies at the 129-sample layer: group 6's tangential speed +0.38 [+0.05, +0.70] and off-tangent residual
+      +0.44 [+0.15, +0.78]; group 5's off-tangent residual +0.58 [+0.11, +1.21];
+    - short spikes at the 5-sample layer: group 2 +0.51 [+0.27, +0.76];
+    - the sine's speed-up, which shows only from the 33-sample layer up.
+  - **Limits:**
+    - The planes are still thin: median dimension 1, and none on 10–26 of the 49 series depending on the layer.
+    - A true projector (eigenvalues capped at 1) adds little beyond the residual (−0.02 to +0.05).
+    - Group 3 stays near 0.
+  - **Three tangent uses not tried before** (s17a, whole-window planes):
+    - the off-tangent residual at the window's centre sample beats the whole-window version, +0.38 [+0.22, +0.55];
+    - weighting along-the-set and across-the-set deviations separately helps long anomalies (+0.51 in group 6) but is
+      lower overall;
+    - the angle between a window's plane and the plane one period earlier is weak overall, but it is the strongest
+      score on the sine's speed-up.
 - **Written:**
   - a note on eleven possible uses of a tangent-space estimate for anomaly detection, four of them tested so far
     (`SG_AD/docs/note_tangent_space_uses_for_ad_2026-11-03.md`);
@@ -560,8 +574,7 @@ invisible), by anomaly length (columns) and context (rows).*
 
 ## ⏭️ Next Steps
 
-- **s17 (running): the learned tangent plane at each layer,** and the three untried tangent uses, read by group as in
-  s14–s16.
+- See week 19's plan, written after the meeting.
 - **What makes group 3 hard?** Neither the score's time resolution nor the network's reach explains most of it.
   Proposed: a per-anomaly reference that detects by other means (the 12-view nearest-neighbour score), to see whether
   group 3 is detectable at all, and a look at a sample of its labels.
